@@ -109,11 +109,11 @@ export default function ViolationRulesPage() {
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-          <input type="text" placeholder="Cari nama pelanggaran..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none" />
+          <input type="text" placeholder="Cari nama pelanggaran..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none" />
         </div>
         <div className="relative min-w-[200px]">
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none appearance-none">
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full pl-9 pr-4 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none appearance-none">
             <option value="">Semua Kategori</option>
             <option value="Ringan">Ringan</option>
             <option value="Sedang">Sedang</option>
@@ -180,10 +180,10 @@ export default function ViolationRulesPage() {
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">Nama Pelanggaran</label><input type="text" required value={formData.violation_name} onChange={e => setFormData({...formData, violation_name: e.target.value})} placeholder="Contoh: Terlambat > 15 Menit" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
+              <div><label className="block text-sm font-medium text-slate-700 mb-1">Nama Pelanggaran</label><input type="text" required value={formData.violation_name} onChange={e => setFormData({...formData, violation_name: e.target.value})} placeholder="Contoh: Terlambat > 15 Menit" className="w-full px-3 py-2 text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Kategori</label><select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"><option value="Ringan">Ringan</option><option value="Sedang">Sedang</option><option value="Berat">Berat</option></select></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Bobot Poin</label><input type="number" required min="1" value={formData.points} onChange={e => setFormData({...formData, points: e.target.value})} placeholder="Misal: 10" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Kategori</label><select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full px-3 py-2 text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"><option value="Ringan">Ringan</option><option value="Sedang">Sedang</option><option value="Berat">Berat</option></select></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Bobot Poin</label><input type="number" required min="1" value={formData.points} onChange={e => setFormData({...formData, points: e.target.value})} placeholder="Misal: 10" className="w-full px-3 py-2 text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
               </div>
               <div className="flex justify-end pt-4"><button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Simpan Aturan</button></div>
             </form>

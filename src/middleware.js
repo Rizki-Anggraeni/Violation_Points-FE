@@ -16,16 +16,38 @@ export function middleware(request) {
         const decodedPayload = JSON.parse(atob(payloadBase64));
         const userRole = decodedPayload.role;
 
-        // Logika Pengecekan Role
+        // 1. Pengecekan khusus untuk role 'orang_tua'
         if (userRole === 'orang_tua') {
-            // Jika role orang_tua mencoba akses /dashboard tapi BUKAN /dashboard/ortu, arahkan ke jalurnya
             if (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/ortu')) {
-                return NextResponse.redirect(new URL('/dashboard/ortu', request.url));
+                const url = new URL('/dashboard/ortu', request.url);
+                url.searchParams.set('error', 'unauthorized');
+                return NextResponse.redirect(url);
             }
-        } else {
-            // (Opsional) Jika user biasa/guru mencoba akses halaman khusus orang_tua, tendang ke dashboard utama
-            if (pathname.startsWith('/dashboard/ortu')) {
-                return NextResponse.redirect(new URL('/dashboard', request.url));
+            return NextResponse.next();
+        } 
+        
+        // 2. Blokir akses ke URL /dashboard/ortu untuk role selain orang_tua
+        if (pathname.startsWith('/dashboard/ortu')) {
+            const url = new URL('/dashboard', request.url);
+            url.searchParams.set('error', 'unauthorized');
+            return NextResponse.redirect(url);
+        }
+
+        // 3. Matriks Pembatasan Akses URL berdasarkan Role
+        const routeAccess = {
+            '/dashboard/teachers': ['admin', 'bk', 'guru_bk'],
+            '/dashboard/presensi': ['admin', 'bk', 'wali_kelas', 'guru', 'sekretaris'],
+            '/dashboard/violations': ['admin', 'bk', 'guru_bk', 'wali_kelas', 'sekretaris'],
+        };
+
+        // 4. Proses Pengecekan URL saat ini dengan Matriks Akses
+        for (const [route, allowedRoles] of Object.entries(routeAccess)) {
+            if (pathname.startsWith(route)) {
+                if (!allowedRoles.includes(userRole)) {
+                    const url = new URL('/dashboard', request.url);
+                    url.searchParams.set('error', 'unauthorized');
+                    return NextResponse.redirect(url);
+                }
             }
         }
 

@@ -185,7 +185,7 @@ export default function DataKelasJadwalPage() {
                 placeholder="Cari mata pelajaran atau guru..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 shadow-sm rounded-lg focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                className="w-full pl-10 pr-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 bg-white border border-slate-200 shadow-sm rounded-lg focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
               />
             </div>
           </div>
@@ -270,7 +270,7 @@ export default function DataKelasJadwalPage() {
             <form onSubmit={handleAddClass} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Nama Kelas</label>
-                <input type="text" required value={newClassName} onChange={e => setNewClassName(e.target.value)} placeholder="Contoh: X RPL 1" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"/>
+                <input type="text" required value={newClassName} onChange={e => setNewClassName(e.target.value)} placeholder="Contoh: X RPL 1" className="w-full px-3 py-2 text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"/>
               </div>
               <div className="flex justify-end pt-2">
                 <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Simpan Kelas</button>
@@ -291,22 +291,22 @@ export default function DataKelasJadwalPage() {
             <form onSubmit={handleAddSchedule} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Mata Pelajaran</label>
-                <input type="text" required value={scheduleForm.subject} onChange={e => setScheduleForm({...scheduleForm, subject: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"/>
+                <input type="text" required value={scheduleForm.subject} onChange={e => setScheduleForm({...scheduleForm, subject: e.target.value})} className="w-full px-3 py-2 text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"/>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Hari</label>
-                <select value={scheduleForm.day} onChange={e => setScheduleForm({...scheduleForm, day: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                <select value={scheduleForm.day} onChange={e => setScheduleForm({...scheduleForm, day: e.target.value})} className="w-full px-3 py-2 text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
                   {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Jam Mulai</label>
-                  <input type="time" required value={scheduleForm.start_time} onChange={e => setScheduleForm({...scheduleForm, start_time: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"/>
+                  <input type="time" required value={scheduleForm.start_time} onChange={e => setScheduleForm({...scheduleForm, start_time: e.target.value})} className="w-full px-3 py-2 text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"/>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Jam Selesai</label>
-                  <input type="time" required value={scheduleForm.end_time} onChange={e => setScheduleForm({...scheduleForm, end_time: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"/>
+                  <input type="time" required value={scheduleForm.end_time} onChange={e => setScheduleForm({...scheduleForm, end_time: e.target.value})} className="w-full px-3 py-2 text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"/>
                 </div>
               </div>
               <div className="flex justify-end pt-4">

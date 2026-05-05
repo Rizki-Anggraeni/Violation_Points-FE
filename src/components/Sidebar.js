@@ -10,7 +10,10 @@ import {
   LogOut,
   ChevronDown,
   ChevronUp,
-  X
+  X,
+  CheckSquare,
+  FileText,
+  Table
 } from 'lucide-react';
 
 export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
@@ -19,6 +22,7 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
     master: false,
     laporan: false
   });
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const toggleDropdown = (key) => {
     setOpenDropdowns((prev) => ({
@@ -32,7 +36,8 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
   const canSeeTeachers = role === 'admin' || role === 'bk' || role === 'guru_bk';
 
   return (
-    <aside className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 flex flex-col z-50 shadow-sm transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+    <>
+      <aside className={`fixed lg:static shrink-0 inset-y-0 left-0 w-64 bg-white border-r border-slate-200 flex flex-col z-50 shadow-sm transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       {/* Logo & Nama Instansi */}
       <div className="flex flex-col items-center justify-center py-6 border-b border-slate-100 relative">
         <button onClick={() => setIsOpen && setIsOpen(false)} className="absolute top-4 right-4 lg:hidden text-slate-400 hover:text-slate-600">
@@ -89,6 +94,20 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
             </div>
           )}
 
+          {/* Menu Input Presensi */}
+          {role !== 'orang_tua' && role !== 'guru_bk' && (
+            <Link
+              href="/dashboard/attendances"
+              onClick={() => setIsOpen && setIsOpen(false)}
+              className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group ${
+                pathname.startsWith('/dashboard/presensi') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <CheckSquare className={`w-5 h-5 mr-3 transition-colors ${pathname.startsWith('/dashboard/presensi') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500'}`} />
+              <span className="text-sm font-medium">Input Presensi</span>
+            </Link>
+          )}
+
           {/* Dropdown Laporan */}
           <div className="space-y-1">
             <button
@@ -108,7 +127,7 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
                 {/* Garis vertikal indikator */}
                 <div className="absolute left-6 top-0 bottom-0 w-px bg-slate-200"></div>
 
-                <Link onClick={() => setIsOpen && setIsOpen(false)} href="/dashboard/attendances" className={`block px-3 py-2 text-sm rounded-md transition-colors relative ${pathname.startsWith('/dashboard/attendances') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Rekap Presensi</Link>
+                <button onClick={() => { setIsOpen && setIsOpen(false); setIsExportModalOpen(true); }} className="w-full text-left block px-3 py-2 text-sm rounded-md transition-colors relative text-slate-500 hover:text-slate-900 hover:bg-slate-50">Rekap Presensi</button>
                 <Link onClick={() => setIsOpen && setIsOpen(false)} href="/dashboard/violations" className={`block px-3 py-2 text-sm rounded-md transition-colors relative ${pathname.startsWith('/dashboard/violations') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Log Pelanggaran</Link>
               </div>
             )}
@@ -127,5 +146,35 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
         </button>
       </div>
     </aside>
+
+      {/* Modal Export Rekap Presensi */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center px-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800">Export Rekap Presensi</h3>
+              <button onClick={() => setIsExportModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600 text-center">Pilih format file untuk mengunduh data rekap presensi.</p>
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <button onClick={() => alert('Fitur Export PDF akan segera disambungkan ke Backend!')} className="flex flex-col items-center justify-center p-4 border border-red-200 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors shadow-sm">
+                  <FileText className="w-8 h-8 mb-2" />
+                  <span className="font-bold text-sm">PDF</span>
+                  <span className="text-[10px] font-medium text-red-500/80">Dokumen</span>
+                </button>
+                <button onClick={() => alert('Fitur Export Excel akan segera disambungkan ke Backend!')} className="flex flex-col items-center justify-center p-4 border border-emerald-200 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors shadow-sm">
+                  <Table className="w-8 h-8 mb-2" />
+                  <span className="font-bold text-sm">Excel</span>
+                  <span className="text-[10px] font-medium text-emerald-500/80">Spreadsheet</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

@@ -31,8 +31,8 @@ export default function DashboardPage() {
 
   if (!isMounted) return null;
 
-  if (role === 'wali_kelas') {
-    return <WaliKelasDashboard />;
+  if (role === 'wali_kelas' || role === 'sekretaris') {
+    return <WaliKelasDashboard role={role} />;
   }
 
   return (
@@ -144,7 +144,7 @@ function StatCard({ title, value, icon: Icon, color, bg }) {
   );
 }
 
-function WaliKelasDashboard() {
+function WaliKelasDashboard({ role }) {
   const [selectedDay, setSelectedDay] = useState('Senin');
 
   // Mock Data Khusus Wali Kelas
@@ -249,11 +249,15 @@ function WaliKelasDashboard() {
       {/* Row 3: Tabel Pelanggaran Terakhir */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h3 className="text-lg font-semibold text-slate-800">Pelanggaran Terakhir (Kelas A)</h3>
-          <button className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-colors shadow-sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Catat Pelanggaran Baru
-          </button>
+          <h3 className="text-lg font-semibold text-slate-800">
+            {role === 'sekretaris' ? 'Pelanggaran Terakhir' : 'Pelanggaran Terakhir (Kelas A)'}
+          </h3>
+          {role !== 'sekretaris' && (
+            <button className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-colors shadow-sm">
+              <Plus className="w-4 h-4 mr-2" />
+              Catat Pelanggaran Baru
+            </button>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[600px]">
