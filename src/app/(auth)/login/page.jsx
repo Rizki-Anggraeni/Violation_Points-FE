@@ -35,7 +35,7 @@ export default function LoginPage() {
       const userRole = decodedPayload.role;
 
       // Arahkan user sesuai dengan role-nya
-      if (userRole === 'ortu') {
+      if (userRole === 'orang_tua') {
         router.push('/dashboard/ortu');
       } else {
         router.push('/dashboard');

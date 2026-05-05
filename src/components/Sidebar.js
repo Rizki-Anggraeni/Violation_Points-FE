@@ -27,8 +27,9 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
     }));
   };
 
-  // Pengecekan role: admin, bk (atau guru_bk), dan guru bisa melihat Data Master
-  const isMasterVisible = role === 'admin' || role === 'bk' || role === 'guru_bk' || role === 'guru';
+  // Pengecekan role: admin, bk (atau guru_bk), guru, dan wali_kelas bisa melihat Data Master
+  const isMasterVisible = role === 'admin' || role === 'bk' || role === 'guru_bk' || role === 'guru' || role === 'wali_kelas';
+  const canSeeTeachers = role === 'admin' || role === 'bk' || role === 'guru_bk';
 
   return (
     <aside className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 flex flex-col z-50 shadow-sm transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
@@ -80,7 +81,7 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
                   <div className="absolute left-6 top-0 bottom-0 w-px bg-slate-200"></div>
                   
                   <Link onClick={() => setIsOpen && setIsOpen(false)} href="/dashboard/students" className={`block px-3 py-2 text-sm rounded-md transition-colors relative ${pathname.startsWith('/dashboard/students') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Data Siswa</Link>
-                  <Link onClick={() => setIsOpen && setIsOpen(false)} href="/dashboard/teachers" className={`block px-3 py-2 text-sm rounded-md transition-colors relative ${pathname.startsWith('/dashboard/teachers') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Data Wali Kelas</Link>
+                  {canSeeTeachers && <Link onClick={() => setIsOpen && setIsOpen(false)} href="/dashboard/teachers" className={`block px-3 py-2 text-sm rounded-md transition-colors relative ${pathname.startsWith('/dashboard/teachers') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Data Wali Kelas</Link>}
                   <Link onClick={() => setIsOpen && setIsOpen(false)} href="/dashboard/classes" className={`block px-3 py-2 text-sm rounded-md transition-colors relative ${pathname.startsWith('/dashboard/classes') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Data Kelas & Jadwal</Link>
                   <Link onClick={() => setIsOpen && setIsOpen(false)} href="/dashboard/violation-rules" className={`block px-3 py-2 text-sm rounded-md transition-colors relative ${pathname.startsWith('/dashboard/violation-rules') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Aturan Pelanggaran</Link>
                 </div>

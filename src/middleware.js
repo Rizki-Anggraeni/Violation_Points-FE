@@ -17,13 +17,13 @@ export function middleware(request) {
         const userRole = decodedPayload.role;
 
         // Logika Pengecekan Role
-        if (userRole === 'ortu') {
-            // Jika role ortu mencoba akses /dashboard tapi BUKAN /dashboard/ortu, arahkan ke jalurnya
+        if (userRole === 'orang_tua') {
+            // Jika role orang_tua mencoba akses /dashboard tapi BUKAN /dashboard/ortu, arahkan ke jalurnya
             if (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/ortu')) {
                 return NextResponse.redirect(new URL('/dashboard/ortu', request.url));
             }
         } else {
-            // (Opsional) Jika user biasa/guru mencoba akses halaman khusus ortu, tendang ke dashboard utama
+            // (Opsional) Jika user biasa/guru mencoba akses halaman khusus orang_tua, tendang ke dashboard utama
             if (pathname.startsWith('/dashboard/ortu')) {
                 return NextResponse.redirect(new URL('/dashboard', request.url));
             }

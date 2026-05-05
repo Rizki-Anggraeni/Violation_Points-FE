@@ -26,6 +26,8 @@ export default function DashboardLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState({ master: false, laporan: false });
   const [role, setRole] = useState('');
+  const [headerSearch, setHeaderSearch] = useState('');
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -45,7 +47,7 @@ export default function DashboardLayout({ children }) {
     localStorage.removeItem('token');
     // Hapus cookies token dengan set expires ke masa lalu
     document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    router.push('/auth/login');
+    router.push('/login');
   };
 
   const toggleDropdown = (key) => {
@@ -58,7 +60,7 @@ export default function DashboardLayout({ children }) {
   // Menentukan menu berdasarkan role pengguna
   const getMenuItems = () => {
     const baseMenus = [
-      { name: 'Dashboard', href: role === 'ortu' ? '/dashboard/ortu' : '/dashboard', icon: Home },
+      { name: 'Dashboard', href: role === 'orang_tua' ? '/dashboard/ortu' : '/dashboard', icon: Home },
     ];
 
     switch (role) {
@@ -104,7 +106,7 @@ export default function DashboardLayout({ children }) {
           { name: 'Jadwal Pelajaran', href: '/dashboard/schedules', icon: Calendar },
           { name: 'Input Presensi', href: '/dashboard/attendances', icon: CheckSquare },
         ];
-      case 'ortu':
+      case 'orang_tua':
         return [
           ...baseMenus,
           { name: 'Presensi Anak', href: '/dashboard/ortu/attendances', icon: CheckSquare },
@@ -216,29 +218,53 @@ export default function DashboardLayout({ children }) {
             </button>
           </div>
 
-          {/* Search Input Tengah */}
-          <div className="flex-1 max-w-2xl mx-auto px-4 hidden sm:block">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+        {/* Search Input Kiri/Tengah */}
+        <div className="flex-1 max-w-xl px-4 hidden sm:block">
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-emerald-500 transition-colors" />
               <input
                 type="text"
-                placeholder="Cari sesuatu..."
-                className="w-full pl-10 pr-4 py-2 text-sm bg-slate-100 border-transparent rounded-lg focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+              value={headerSearch}
+              onChange={(e) => setHeaderSearch(e.target.value)}
+              placeholder="Cari data siswa atau kelas..."
+              className="w-full pl-10 pr-10 py-2 text-sm bg-slate-100 border border-transparent rounded-lg focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
               />
+            {headerSearch && (
+              <button onClick={() => setHeaderSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
+            )}
             </div>
           </div>
 
-          {/* Profile Info Kanan */}
-          <div className="flex items-center justify-end ml-auto">
-            <div className="flex items-center space-x-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-slate-700 uppercase">{role.replace(/_/g, ' ')}</p>
-              </div>
-              <span className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold border border-blue-200">
-                <User className="w-5 h-5" />
-              </span>
+        {/* Profile Info Kanan */}
+        <div className="flex items-center justify-end ml-auto relative">
+          <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center space-x-3 focus:outline-none">
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-semibold text-slate-700">Guru Agung Rizki</p>
+              <p className="text-xs text-slate-500 uppercase">{role.replace(/_/g, ' ')}</p>
             </div>
-          </div>
+            <span className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold border border-emerald-200 shadow-sm">
+              GA
+            </span>
+          </button>
+
+          {/* Dropdown Profile Menu */}
+          {isProfileOpen && (
+            <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-2 z-50">
+              <div className="px-4 py-2 border-b border-slate-100 sm:hidden">
+                <p className="text-sm font-semibold text-slate-700">Guru Agung Rizki</p>
+                <p className="text-xs text-slate-500 uppercase">{role.replace(/_/g, ' ')}</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center transition-colors"
+              >
+                <LogOut className="w-4 h-4 mr-2" /> Log Out
+              </button>
+            </div>
+          )}
+        </div>
         </header>
 
         <div className="flex-1 overflow-auto p-4 lg:p-8 bg-slate-50">
