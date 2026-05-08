@@ -3,18 +3,14 @@
 import { useState, useEffect } from 'react';
 import { Users, AlertTriangle, TrendingUp, ShieldAlert, BarChart3, Eye, Plus, MoreVertical } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { barData, pieData } from '../../lib/dummyData';
-
-const recentViolations = [
-  { id: 1, name: 'Budi Santoso', violation: 'Merokok di area sekolah', points: 50, date: '12 Okt 2023' },
-  { id: 2, name: 'Siti Aminah', violation: 'Terlambat > 15 menit', points: 10, date: '12 Okt 2023' },
-  { id: 3, name: 'Ahmad Fauzi', violation: 'Membolos pelajaran', points: 20, date: '11 Okt 2023' },
-  { id: 4, name: 'Dewi Lestari', violation: 'Seragam tidak lengkap', points: 5, date: '10 Okt 2023' },
-];
+import Link from 'next/link';
+import api from '../../lib/axios';
 
 export default function DashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [role, setRole] = useState('');
+  const [students, setStudents] = useState([]);
+  const [violations, setViolations] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -26,6 +22,21 @@ export default function DashboardPage() {
         console.error('Gagal memproses token');
       }
     }
+
+    const fetchDashboardData = async () => {
+      try {
+        const [stuRes, vioRes] = await Promise.all([
+            api.get('/students'),
+            api.get('/violations')
+        ]);
+        setStudents(stuRes.data);
+        setViolations(vioRes.data);
+      } catch (e) {
+        console.error('Gagal memuat data dashboard', e);
+      }
+    };
+    
+    fetchDashboardData();
     setIsMounted(true);
   }, []);
 
@@ -35,14 +46,51 @@ export default function DashboardPage() {
     return <WaliKelasDashboard role={role} />;
   }
 
+  // Kalkulasi Data Admin/Guru BK
+  const totalSiswa = students.length;
+  const now = new Date();
+  const currentMonthViolations = violations.filter(v => new Date(v.date).getMonth() === now.getMonth() && new Date(v.date).getFullYear() === now.getFullYear());
+  
+  const pelanggaranBulanIni = currentMonthViolations.length;
+  const kasusBerat = currentMonthViolations.filter(v => v.rule_id?.category === 'Berat').length;
+  const siswaPeringatan = students.filter(s => s.total_points >= 50).length;
+
+  const monthlyPoints = Array(12).fill(0);
+  violations.forEach(v => {
+      const d = new Date(v.date);
+      if (d.getFullYear() === now.getFullYear()) {
+          monthlyPoints[d.getMonth()] += (v.rule_id?.points || 0);
+      }
+  });
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  const calculatedBarData = monthNames.map((name, i) => ({ name, poin: monthlyPoints[i] }));
+
+  const categoryCount = { Ringan: 0, Sedang: 0, Berat: 0 };
+  violations.forEach(v => {
+      if (v.rule_id?.category) {
+          categoryCount[v.rule_id.category]++;
+      }
+  });
+  const calculatedPieData = [
+    { name: 'Berat', value: categoryCount.Berat, fill: '#ef4444' },
+    { name: 'Sedang', value: categoryCount.Sedang, fill: '#f59e0b' },
+    { name: 'Ringan', value: categoryCount.Ringan, fill: '#3b82f6' },
+  ];
+
+  const calculatedRecent = [...violations].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
   return (
     <div className="space-y-6">
       {/* Grid Statistik */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Siswa" value="1,240" icon={Users} color="text-slate-700" bg="bg-slate-100" />
-        <StatCard title="Pelanggaran (Bulan Ini)" value="156" icon={TrendingUp} color="text-slate-700" bg="bg-slate-100" />
-        <StatCard title="Kasus Berat" value="12" icon={AlertTriangle} color="text-slate-700" bg="bg-slate-100" />
-        <StatCard title="Siswa Peringatan" value="8" icon={ShieldAlert} color="text-slate-700" bg="bg-slate-100" />
+        <StatCard title="Total Siswa" value={totalSiswa} icon={Users} color="text-slate-700" bg="bg-slate-100" />
+        <StatCard title="Pelanggaran (Bulan Ini)" value={pelanggaranBulanIni} icon={TrendingUp} color="text-slate-700" bg="bg-slate-100" />
+        <StatCard title="Kasus Berat" value={kasusBerat} icon={AlertTriangle} color="text-slate-700" bg="bg-slate-100" />
+        <StatCard title="Siswa Peringatan" value={siswaPeringatan} icon={ShieldAlert} color="text-slate-700" bg="bg-slate-100" />
       </div>
 
       {/* Area Grafik */}
@@ -52,7 +100,7 @@ export default function DashboardPage() {
           <div className="h-72 w-full">
             {isMounted && (
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <BarChart data={barData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={calculatedBarData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
@@ -71,7 +119,7 @@ export default function DashboardPage() {
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <PieChart>
                   <Pie 
-                    data={pieData} 
+                    data={calculatedPieData} 
                     cx="50%" 
                     cy="50%" 
                     innerRadius={60} 
@@ -80,7 +128,7 @@ export default function DashboardPage() {
                     dataKey="value"
                     label={({ percent }) => percent > 0 ? `${(percent * 100).toFixed(1)}%` : ''}
                   >
-                    {pieData.map((entry, index) => (
+                    {calculatedPieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Pie>
@@ -95,9 +143,15 @@ export default function DashboardPage() {
 
       {/* Tabel Pelanggaran Terakhir */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h3 className="text-lg font-semibold text-slate-800">Pelanggaran Terakhir</h3>
-          <button className="text-sm font-medium text-blue-600 hover:text-blue-700">Lihat Semua</button>
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard/violations?action=new" className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+              <Plus className="w-4 h-4 mr-1.5" />
+              Catat Pelanggaran Baru
+            </Link>
+            <Link href="/dashboard/violations" className="text-sm font-medium text-blue-600 hover:text-blue-700">Lihat Semua</Link>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -110,16 +164,16 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody className="text-sm text-slate-700 divide-y divide-slate-100">
-              {recentViolations.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-slate-800">{item.name}</td>
-                  <td className="px-6 py-4">{item.violation}</td>
+              {calculatedRecent.map((item) => (
+                <tr key={item._id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-slate-800">{item.student_id?.name || 'Siswa Dihapus'}</td>
+                  <td className="px-6 py-4">{item.rule_id?.violation_name || 'Aturan Dihapus'}</td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      +{item.points}
+                      +{item.rule_id?.points || 0}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-slate-500">{item.date}</td>
+                  <td className="px-6 py-4 text-slate-500">{formatDate(item.date)}</td>
                 </tr>
               ))}
             </tbody>
@@ -146,49 +200,69 @@ function StatCard({ title, value, icon: Icon, color, bg }) {
 
 function WaliKelasDashboard({ role }) {
   const [selectedDay, setSelectedDay] = useState('Senin');
+  const [students, setStudents] = useState([]);
+  const [violations, setViolations] = useState([]);
+  const [attendances, setAttendances] = useState([]);
+  const [schedules, setSchedules] = useState([]);
 
-  // Mock Data Khusus Wali Kelas
-  const attendanceDataByDay = {
-    'Senin': [
-      { name: 'Matematika', hadir: 32 }, { name: 'B. Indo', hadir: 35 }, { name: 'Fisika', hadir: 33 }, { name: 'Agama', hadir: 35 }, { name: 'Sejarah', hadir: 34 }
-    ],
-    'Selasa': [
-      { name: 'Pkn', hadir: 34 }, { name: 'Biologi', hadir: 35 }, { name: 'Kimia', hadir: 33 }
-    ],
-    'Rabu': [
-      { name: 'B. Inggris', hadir: 30 }, { name: 'Seni', hadir: 35 }, { name: 'Penjas', hadir: 31 }, { name: 'Prakarya', hadir: 35 }
-    ],
-    'Kamis': [
-      { name: 'Fisika', hadir: 35 }, { name: 'Kimia', hadir: 34 }, { name: 'B. Indo', hadir: 35 }
-    ],
-    'Jumat': [
-      { name: 'Mulok', hadir: 33 }, { name: 'B. Inggris', hadir: 35 }, { name: 'Matematika', hadir: 32 }
-    ]
-  };
+  useEffect(() => {
+    const fetchWkData = async () => {
+        try {
+            const [stuRes, vioRes, attRes, schRes] = await Promise.all([
+                api.get('/students'),
+                api.get('/violations'),
+                api.get('/attendances'),
+                api.get('/schedules')
+            ]);
+            setStudents(stuRes.data);
+            setViolations(vioRes.data);
+            setAttendances(attRes.data);
+            setSchedules(schRes.data);
+        } catch(e) { console.error('Gagal memuat data wali kelas', e) }
+    }
+    fetchWkData();
+  }, []);
 
+  // Kalkulasi
+  const totalSiswa = students.length;
+  const now = new Date();
+  const currentMonthViolations = violations.filter(v => new Date(v.date).getMonth() === now.getMonth() && new Date(v.date).getFullYear() === now.getFullYear());
+  
+  const poinBulanIni = currentMonthViolations.reduce((acc, v) => acc + (v.rule_id?.points || 0), 0);
+  const kasusBerat = currentMonthViolations.filter(v => v.rule_id?.category === 'Berat').length;
+  const siswaPantauan = students.filter(s => s.total_points >= 20).length;
+
+  const attCount = { Hadir: 0, Sakit: 0, Izin: 0, Alpa: 0 };
+  attendances.forEach(a => {
+      if (attCount[a.status] !== undefined) attCount[a.status]++;
+  });
   const attendancePieData = [
-    { name: 'Hadir', value: 168, fill: '#10b981' }, // Emerald
-    { name: 'Sakit', value: 4, fill: '#f59e0b' }, // Amber
-    { name: 'Izin', value: 2, fill: '#3b82f6' }, // Blue
-    { name: 'Alpa', value: 1, fill: '#ef4444' }, // Red
+      { name: 'Hadir', value: attCount.Hadir, fill: '#10b981' },
+      { name: 'Sakit', value: attCount.Sakit, fill: '#f59e0b' },
+      { name: 'Izin', value: attCount.Izin, fill: '#3b82f6' },
+      { name: 'Alpa', value: attCount.Alpa, fill: '#ef4444' },
   ];
 
-  const wkViolations = [
-    { id: 1, name: 'Budi Santoso', violation: 'Merokok di area sekolah', points: 50, date: '12 Okt 2023', category: 'Berat' },
-    { id: 2, name: 'Siti Aminah', violation: 'Terlambat > 15 menit', points: 10, date: '12 Okt 2023', category: 'Sedang' },
-    { id: 3, name: 'Ahmad Fauzi', violation: 'Membolos pelajaran', points: 20, date: '11 Okt 2023', category: 'Sedang' },
-    { id: 4, name: 'Dewi Lestari', violation: 'Seragam tidak lengkap', points: 5, date: '10 Okt 2023', category: 'Ringan' },
-    { id: 5, name: 'Rizky Pratama', violation: 'Atribut tidak lengkap', points: 5, date: '09 Okt 2023', category: 'Ringan' },
-  ];
+  const daySchedules = schedules.filter(s => s.day === selectedDay).sort((a,b) => (a.start_time || '').localeCompare(b.start_time || ''));
+  const attendanceDataByDay = daySchedules.map(sch => {
+      const hadirCount = attendances.filter(a => (a.schedule_id?._id || a.schedule_id) === sch._id && a.status === 'Hadir').length;
+      return { name: sch.subject, hadir: hadirCount };
+  });
+
+  const wkViolations = [...violations].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
 
   return (
     <div className="space-y-6">
       {/* Row 1: Grid Statistik Modern */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Siswa Kelas A" value="35" icon={Users} color="text-slate-600" bg="bg-slate-50" />
-        <StatCard title="Poin Bulan Ini" value="215" icon={BarChart3} color="text-emerald-600" bg="bg-emerald-50" />
-        <StatCard title="Kasus Berat" value="1" icon={ShieldAlert} color="text-red-600" bg="bg-red-50" />
-        <StatCard title="Siswa dlm Pantauan" value="4" icon={Eye} color="text-amber-600" bg="bg-amber-50" />
+        <StatCard title="Total Siswa Kelas" value={totalSiswa} icon={Users} color="text-slate-600" bg="bg-slate-50" />
+        <StatCard title="Poin Bulan Ini" value={poinBulanIni} icon={BarChart3} color="text-emerald-600" bg="bg-emerald-50" />
+        <StatCard title="Kasus Berat" value={kasusBerat} icon={ShieldAlert} color="text-red-600" bg="bg-red-50" />
+        <StatCard title="Siswa dlm Pantauan" value={siswaPantauan} icon={Eye} color="text-amber-600" bg="bg-amber-50" />
       </div>
 
       {/* Row 2: Grafik Berdampingan Modern */}
@@ -208,10 +282,10 @@ function WaliKelasDashboard({ role }) {
           </div>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-              <BarChart data={attendanceDataByDay[selectedDay]} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={attendanceDataByDay} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} domain={[0, 35]} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} domain={[0, Math.max(totalSiswa, 10)]} />
                 <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                 <Bar dataKey="hadir" name="Jml Hadir" fill="#10b981" radius={[4, 4, 0, 0]} barSize={32} />
               </BarChart>
@@ -252,12 +326,6 @@ function WaliKelasDashboard({ role }) {
           <h3 className="text-lg font-semibold text-slate-800">
             {role === 'sekretaris' ? 'Pelanggaran Terakhir' : 'Pelanggaran Terakhir (Kelas A)'}
           </h3>
-          {role !== 'sekretaris' && (
-            <button className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-colors shadow-sm">
-              <Plus className="w-4 h-4 mr-2" />
-              Catat Pelanggaran Baru
-            </button>
-          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[600px]">
@@ -287,16 +355,16 @@ function WaliKelasDashboard({ role }) {
                         <span className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs mr-3">
                           {initials}
                         </span>
-                        <span className="font-medium text-slate-800">{item.name}</span>
+                          <span className="font-medium text-slate-800">{item.student_id?.name || 'Siswa Dihapus'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">{item.violation}</td>
+                      <td className="px-6 py-4">{item.rule_id?.violation_name || '-'}</td>
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badgeColor}`}>
-                        +{item.points}
+                          +{item.rule_id?.points || 0}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-500">{item.date}</td>
+                      <td className="px-6 py-4 text-slate-500">{formatDate(item.date)}</td>
                     <td className="px-6 py-4 text-center">
                       <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors">
                         <MoreVertical className="w-4 h-4" />

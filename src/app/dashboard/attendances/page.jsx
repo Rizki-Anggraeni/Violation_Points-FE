@@ -1,22 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle, CheckSquare, Info } from 'lucide-react';
-
-// --- Mock Data ---
-const mockSchedules = [
-  { id: 1, time: '07:00 - 08:30', subject: 'Matematika', className: 'X RPL 1' },
-  { id: 2, time: '08:30 - 10:00', subject: 'Bahasa Indonesia', className: 'X RPL 1' },
-  { id: 3, time: '10:30 - 12:00', subject: 'Pemrograman Web', className: 'X RPL 2' },
-];
-
-const mockStudents = [
-  { id: 's1', name: 'Ahmad Fauzi', nis: '1001' },
-  { id: 's2', name: 'Budi Santoso', nis: '1002' },
-  { id: 's3', name: 'Dewi Lestari', nis: '1003' },
-  { id: 's4', name: 'Siti Aminah', nis: '1004' },
-  { id: 's5', name: 'Zaki Pratama', nis: '1005' },
-];
+import { useState, useEffect } from 'react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle, CheckSquare, Info, Loader2, AlertCircle } from 'lucide-react';
+import api from '../../../lib/axios';
 
 const STATUS_OPTIONS = [
   { key: 'Hadir', alias: 'H', color: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200', active: 'bg-emerald-500 text-white border-emerald-500' },
@@ -33,9 +19,36 @@ export default function PresensiPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // State Pilihan Jadwal & Presensi
-  const [selectedSchedule, setSelectedSchedule] = useState(mockSchedules[0]);
+  // State Data & Presensi
+  const [schedules, setSchedules] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [attendances, setAttendances] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch Data Jadwal dan Siswa saat komponen dimuat
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [schRes, stuRes] = await Promise.all([
+          api.get('/schedules'),
+          api.get('/students')
+        ]);
+        setSchedules(schRes.data);
+        setStudents(stuRes.data);
+        if (schRes.data.length > 0) {
+          setSelectedSchedule(schRes.data[0]);
+        }
+      } catch (error) {
+        console.error('Gagal memuat data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   // Fungsi Navigasi Kalender
   const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
@@ -59,6 +72,11 @@ export default function PresensiPage() {
     setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day));
   };
 
+  // Filter siswa berdasarkan kelas dari jadwal yang dipilih
+  const filteredStudents = selectedSchedule 
+    ? students.filter(s => (s.class_id?._id || s.class_id) === (selectedSchedule.class_id?._id || selectedSchedule.class_id))
+    : [];
+
   // Fungsi Presensi
   const handleStatusChange = (studentId, status) => {
     setAttendances(prev => ({ ...prev, [studentId]: status }));
@@ -66,14 +84,42 @@ export default function PresensiPage() {
 
   const handleMarkAllHadir = () => {
     const allHadir = {};
-    mockStudents.forEach(student => {
-      allHadir[student.id] = 'Hadir';
+    filteredStudents.forEach(student => {
+      allHadir[student._id] = 'Hadir';
     });
     setAttendances(allHadir);
   };
 
   const formatDate = (date) => {
     return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+  };
+
+  // Menyimpan data ke Backend
+  const handleSaveAttendance = async () => {
+    if (!selectedSchedule) return;
+    setIsSubmitting(true);
+    
+    try {
+      const formattedDate = new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+      
+      const promises = filteredStudents.map(student => {
+        const status = attendances[student._id] || 'Hadir'; // Default Hadir jika tidak dipilih
+        return api.post('/attendances', {
+          student_id: student._id,
+          schedule_id: selectedSchedule._id,
+          date: formattedDate,
+          status: status
+        });
+      });
+
+      await Promise.all(promises);
+      alert('Presensi berhasil disimpan!');
+    } catch (error) {
+      console.error('Gagal menyimpan:', error);
+      alert(error.response?.data?.message || 'Gagal menyimpan presensi. Pastikan Anda menginput di waktu yang sesuai.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -142,12 +188,20 @@ export default function PresensiPage() {
             <p className="text-xs text-slate-500 mt-1">Pilih jadwal untuk membuka form presensi.</p>
           </div>
           <div className="flex-1 overflow-auto p-4">
-            <div className="space-y-3">
-              {mockSchedules.map((schedule) => {
-                const isActive = selectedSchedule?.id === schedule.id;
+            {isLoading ? (
+               <div className="flex justify-center py-10"><Loader2 className="animate-spin text-emerald-500 w-8 h-8" /></div>
+            ) : schedules.length === 0 ? (
+               <div className="text-center py-10 text-slate-400">
+                 <AlertCircle className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                 <p className="text-sm">Tidak ada jadwal tersedia.</p>
+               </div>
+            ) : (
+              <div className="space-y-3">
+              {schedules.map((schedule) => {
+                const isActive = selectedSchedule?._id === schedule._id;
                 return (
                   <div 
-                    key={schedule.id}
+                    key={schedule._id}
                     onClick={() => setSelectedSchedule(schedule)}
                     className={`flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all border ${
                       isActive 
@@ -160,18 +214,19 @@ export default function PresensiPage() {
                         {schedule.subject}
                       </span>
                       <span className="text-xs font-medium text-slate-500 mt-1">
-                        {schedule.time}
+                        {schedule.start_time} - {schedule.end_time}
                       </span>
                     </div>
                     <div className="flex items-center">
                       <span className={`px-3 py-1 text-xs font-semibold rounded-md ${isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                        {schedule.className}
+                        {schedule.class_id?.name || 'Kelas'}
                       </span>
                     </div>
                   </div>
                 )
               })}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -183,7 +238,7 @@ export default function PresensiPage() {
           <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold text-slate-800">
-                Data Siswa Kelas {selectedSchedule.className} - {selectedSchedule.subject}
+                Data Siswa Kelas {selectedSchedule.class_id?.name} - {selectedSchedule.subject}
               </h3>
               <div className="flex items-center mt-2 space-x-3">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -217,12 +272,12 @@ export default function PresensiPage() {
                 </tr>
               </thead>
               <tbody className="text-sm text-slate-700 divide-y divide-slate-50">
-                {mockStudents.map((student, index) => {
+                {filteredStudents.map((student, index) => {
                   const initials = student.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-                  const currentStatus = attendances[student.id];
+                  const currentStatus = attendances[student._id] || 'Hadir'; // Default tampilan Hadir
 
                   return (
-                    <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={student._id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 text-slate-500 font-medium">{index + 1}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center">
@@ -242,7 +297,7 @@ export default function PresensiPage() {
                             return (
                               <button
                                 key={opt.key}
-                                onClick={() => handleStatusChange(student.id, opt.key)}
+                                onClick={() => handleStatusChange(student._id, opt.key)}
                                 title={opt.key}
                                 className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm transition-all duration-200 border shadow-sm
                                   ${isSelected ? opt.active : `bg-white ${opt.color} opacity-70 hover:opacity-100`}
@@ -264,11 +319,12 @@ export default function PresensiPage() {
           {/* Footer Action */}
           <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-end">
             <button 
-              onClick={() => alert('Fitur simpan akan disambungkan ke API backend!')}
-              className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-bold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-colors shadow-md"
+              onClick={handleSaveAttendance}
+              disabled={isSubmitting}
+              className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-bold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 disabled:opacity-70 disabled:cursor-not-allowed transition-colors shadow-md"
             >
-              <CheckCircle className="w-5 h-5 mr-2" />
-              Simpan Presensi
+              {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CheckCircle className="w-5 h-5 mr-2" />}
+              {isSubmitting ? 'Menyimpan...' : 'Simpan Presensi'}
             </button>
           </div>
         </div>

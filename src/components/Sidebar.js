@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Database,
@@ -18,6 +18,7 @@ import {
 
 export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [openDropdowns, setOpenDropdowns] = useState({
     master: false,
     laporan: false
@@ -100,10 +101,10 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
               href="/dashboard/attendances"
               onClick={() => setIsOpen && setIsOpen(false)}
               className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group ${
-                pathname.startsWith('/dashboard/presensi') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                pathname.startsWith('/dashboard/attendances') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              <CheckSquare className={`w-5 h-5 mr-3 transition-colors ${pathname.startsWith('/dashboard/presensi') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500'}`} />
+              <CheckSquare className={`w-5 h-5 mr-3 transition-colors ${pathname.startsWith('/dashboard/attendances') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500'}`} />
               <span className="text-sm font-medium">Input Presensi</span>
             </Link>
           )}
@@ -127,7 +128,15 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
                 {/* Garis vertikal indikator */}
                 <div className="absolute left-6 top-0 bottom-0 w-px bg-slate-200"></div>
 
-                <button onClick={() => { setIsOpen && setIsOpen(false); setIsExportModalOpen(true); }} className="w-full text-left block px-3 py-2 text-sm rounded-md transition-colors relative text-slate-500 hover:text-slate-900 hover:bg-slate-50">Rekap Presensi</button>
+                <button onClick={() => { 
+                  if (setIsOpen) setIsOpen(false); 
+                  if (role === 'guru_bk') {
+                    setIsExportModalOpen(true); // Guru BK langsung buka modal tanpa pindah halaman
+                  } else {
+                    router.push('/dashboard/attendances');
+                    setTimeout(() => setIsExportModalOpen(true), 150); // Jeda kecil agar halaman pindah dulu
+                  }
+                }} className="w-full text-left block px-3 py-2 text-sm rounded-md transition-colors relative text-slate-500 hover:text-slate-900 hover:bg-slate-50">Rekap Presensi</button>
                 <Link onClick={() => setIsOpen && setIsOpen(false)} href="/dashboard/violations" className={`block px-3 py-2 text-sm rounded-md transition-colors relative ${pathname.startsWith('/dashboard/violations') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Log Pelanggaran</Link>
               </div>
             )}

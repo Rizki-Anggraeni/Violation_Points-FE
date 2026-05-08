@@ -35,9 +35,9 @@ export function middleware(request) {
 
         // 3. Matriks Pembatasan Akses URL berdasarkan Role
         const routeAccess = {
-            '/dashboard/teachers': ['admin', 'bk', 'guru_bk'],
-            '/dashboard/presensi': ['admin', 'bk', 'wali_kelas', 'guru', 'sekretaris'],
-            '/dashboard/violations': ['admin', 'bk', 'guru_bk', 'wali_kelas', 'sekretaris'],
+            '/dashboard/teachers': ['admin', 'guru_bk'],
+            '/dashboard/presensi': ['admin', 'wali_kelas', 'sekretaris'],
+            '/dashboard/violations': ['admin', 'guru_bk', 'wali_kelas', 'sekretaris'],
         };
 
         // 4. Proses Pengecekan URL saat ini dengan Matriks Akses

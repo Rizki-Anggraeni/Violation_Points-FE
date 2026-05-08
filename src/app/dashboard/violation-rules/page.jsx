@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit, Trash2, Inbox, Filter, ShieldAlert, Loader2, X } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Inbox, Filter, ShieldAlert, Loader2, X, CheckCircle } from 'lucide-react';
 import api from '../../../lib/axios';
 
 export default function ViolationRulesPage() {
@@ -10,14 +10,23 @@ export default function ViolationRulesPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState({ role: '' });
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Modal & Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editRuleId, setEditRuleId] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
   const [formData, setFormData] = useState({
     violation_name: '',
     points: '',
     category: 'Ringan'
   });
+
+  const showSuccess = (msg) => {
+    setSuccessMessage(msg);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -44,27 +53,53 @@ export default function ViolationRulesPage() {
     }
   };
 
+  const handleEditRuleClick = (rule) => {
+    setFormData({
+      violation_name: rule.violation_name,
+      points: rule.points,
+      category: rule.category
+    });
+    setEditRuleId(rule._id);
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/violation-rules', {
+      const payload = {
         ...formData,
         points: Number(formData.points) // Pastikan poin berupa angka
-      });
+      };
+
+      if (editRuleId) {
+        await api.put(`/violation-rules/${editRuleId}`, payload);
+      } else {
+        await api.post('/violation-rules', payload);
+      }
       setFormData({ violation_name: '', points: '', category: 'Ringan' });
+      setEditRuleId(null);
       setIsModalOpen(false);
       fetchData(); // Refresh data
+      showSuccess(editRuleId ? 'Aturan pelanggaran berhasil diperbarui!' : 'Aturan pelanggaran berhasil ditambahkan!');
     } catch (error) {
-      console.error('Gagal menyimpan aturan', error);
+      console.error('Gagal menyimpan data aturan', error);
       alert(error.response?.data?.message || 'Gagal menyimpan aturan');
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus aturan pelanggaran ini?')) return;
+  const confirmDelete = (id) => {
+    setDeleteId(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const executeDelete = async () => {
+    if (!deleteId) return;
     try {
-      await api.delete(`/violation-rules/${id}`);
+      await api.delete(`/violation-rules/${deleteId}`);
       fetchData();
+      showSuccess('Aturan pelanggaran berhasil dihapus!');
+      setIsDeleteModalOpen(false);
+      setDeleteId(null);
     } catch (error) {
       console.error('Gagal menghapus aturan', error);
     }
@@ -91,6 +126,17 @@ export default function ViolationRulesPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
+      {/* Toast Notifikasi Sukses */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-[100] bg-emerald-500 text-white px-4 py-3 rounded-xl shadow-lg flex items-center animate-in fade-in slide-in-from-top-4 duration-300">
+          <CheckCircle className="w-5 h-5 mr-3" />
+          <span className="text-sm font-medium pr-2">{successMessage}</span>
+          <button onClick={() => setSuccessMessage('')} className="ml-auto pl-2 border-l border-emerald-400/50 hover:text-emerald-200 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -98,7 +144,11 @@ export default function ViolationRulesPage() {
           <p className="text-sm text-slate-500 mt-1">Kelola daftar jenis pelanggaran, bobot poin, dan kategorinya.</p>
         </div>
         {canManageData && (
-          <button onClick={() => setIsModalOpen(true)} className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+          <button onClick={() => {
+            setFormData({ violation_name: '', points: '', category: 'Ringan' });
+            setEditRuleId(null);
+            setIsModalOpen(true);
+          }} className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
             <Plus className="w-4 h-4 mr-2" />
             Tambah Aturan
           </button>
@@ -156,8 +206,8 @@ export default function ViolationRulesPage() {
                     {canManageData && (
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
-                          <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit"><Edit className="w-4 h-4" /></button>
-                          <button onClick={() => handleDelete(rule._id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleEditRuleClick(rule)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit"><Edit className="w-4 h-4" /></button>
+                          <button onClick={() => confirmDelete(rule._id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
                     )}
@@ -176,8 +226,8 @@ export default function ViolationRulesPage() {
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center px-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden">
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-800">Tambah Aturan Pelanggaran</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+              <h3 className="font-bold text-slate-800">{editRuleId ? 'Edit Aturan Pelanggaran' : 'Tambah Aturan Pelanggaran'}</h3>
+              <button onClick={() => { setIsModalOpen(false); setEditRuleId(null); }} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div><label className="block text-sm font-medium text-slate-700 mb-1">Nama Pelanggaran</label><input type="text" required value={formData.violation_name} onChange={e => setFormData({...formData, violation_name: e.target.value})} placeholder="Contoh: Terlambat > 15 Menit" className="w-full px-3 py-2 text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
@@ -185,8 +235,25 @@ export default function ViolationRulesPage() {
                 <div><label className="block text-sm font-medium text-slate-700 mb-1">Kategori</label><select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full px-3 py-2 text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"><option value="Ringan">Ringan</option><option value="Sedang">Sedang</option><option value="Berat">Berat</option></select></div>
                 <div><label className="block text-sm font-medium text-slate-700 mb-1">Bobot Poin</label><input type="number" required min="1" value={formData.points} onChange={e => setFormData({...formData, points: e.target.value})} placeholder="Misal: 10" className="w-full px-3 py-2 text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
               </div>
-              <div className="flex justify-end pt-4"><button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Simpan Aturan</button></div>
+              <div className="flex justify-end pt-4"><button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">{editRuleId ? 'Simpan Perubahan' : 'Simpan Aturan'}</button></div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm overflow-hidden text-center p-6 zoom-in-95 animate-in duration-200">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Konfirmasi Hapus</h3>
+            <p className="text-sm text-slate-500 mb-6">Apakah Anda yakin ingin menghapus aturan pelanggaran ini? Data yang terhapus tidak dapat dikembalikan.</p>
+            <div className="flex justify-center gap-3">
+              <button onClick={() => { setIsDeleteModalOpen(false); setDeleteId(null); }} className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium text-sm transition-colors">Batal</button>
+              <button onClick={executeDelete} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm transition-colors">Ya, Hapus</button>
+            </div>
           </div>
         </div>
       )}

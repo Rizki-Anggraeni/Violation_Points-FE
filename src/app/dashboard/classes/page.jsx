@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit, Trash2, Calendar, Clock, BookOpen, User as UserIcon, ChevronRight, ArrowLeft, X, Loader2, Inbox } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Calendar, Clock, BookOpen, User as UserIcon, ChevronRight, ArrowLeft, X, Loader2, Inbox, CheckCircle } from 'lucide-react';
 import api from '../../../lib/axios';
 
 const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
@@ -13,16 +13,25 @@ export default function DataKelasJadwalPage() {
   const [currentUser, setCurrentUser] = useState({ role: '', id: '', class_id: '' });
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Modal States
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [editScheduleId, setEditScheduleId] = useState(null);
+  const [isDeleteScheduleModalOpen, setIsDeleteScheduleModalOpen] = useState(false);
+  const [deleteScheduleId, setDeleteScheduleId] = useState(null);
   
   // Form States
   const [newClassName, setNewClassName] = useState('');
   const [scheduleForm, setScheduleForm] = useState({
     subject: '', day: 'Senin', start_time: '', end_time: ''
   });
+
+  const showSuccess = (msg) => {
+    setSuccessMessage(msg);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -74,20 +83,56 @@ export default function DataKelasJadwalPage() {
       setNewClassName('');
       setIsClassModalOpen(false);
       fetchData();
+      showSuccess('Kelas baru berhasil ditambahkan!');
     } catch (error) {
       console.error('Gagal menambah kelas', error);
     }
   };
 
+  const handleEditScheduleClick = (schedule) => {
+    setScheduleForm({
+      subject: schedule.subject,
+      day: schedule.day,
+      start_time: schedule.start_time,
+      end_time: schedule.end_time
+    });
+    setEditScheduleId(schedule._id);
+    setIsScheduleModalOpen(true);
+  };
+
   const handleAddSchedule = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/schedules', { ...scheduleForm, class_id: selectedClassId });
+      if (editScheduleId) {
+        await api.put(`/schedules/${editScheduleId}`, { ...scheduleForm, class_id: selectedClassId });
+      } else {
+        await api.post('/schedules', { ...scheduleForm, class_id: selectedClassId });
+      }
       setScheduleForm({ subject: '', day: 'Senin', start_time: '', end_time: '' });
+      setEditScheduleId(null);
       setIsScheduleModalOpen(false);
       fetchData();
+      showSuccess(editScheduleId ? 'Jadwal berhasil diperbarui!' : 'Jadwal baru berhasil ditambahkan!');
     } catch (error) {
       console.error('Gagal menambah jadwal', error);
+    }
+  };
+
+  const confirmDeleteSchedule = (id) => {
+    setDeleteScheduleId(id);
+    setIsDeleteScheduleModalOpen(true);
+  };
+
+  const executeDeleteSchedule = async () => {
+    if (!deleteScheduleId) return;
+    try {
+      await api.delete(`/schedules/${deleteScheduleId}`);
+      fetchData();
+      showSuccess('Jadwal berhasil dihapus!');
+      setIsDeleteScheduleModalOpen(false);
+      setDeleteScheduleId(null);
+    } catch (error) {
+      console.error('Gagal menghapus jadwal', error);
     }
   };
 
@@ -108,6 +153,17 @@ export default function DataKelasJadwalPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
+      {/* Toast Notifikasi Sukses */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-[100] bg-emerald-500 text-white px-4 py-3 rounded-xl shadow-lg flex items-center animate-in fade-in slide-in-from-top-4 duration-300">
+          <CheckCircle className="w-5 h-5 mr-3" />
+          <span className="text-sm font-medium pr-2">{successMessage}</span>
+          <button onClick={() => setSuccessMessage('')} className="ml-auto pl-2 border-l border-emerald-400/50 hover:text-emerald-200 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -125,7 +181,11 @@ export default function DataKelasJadwalPage() {
             </button>
           )}
           {canManageData && selectedClassId && (
-            <button onClick={() => setIsScheduleModalOpen(true)} className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+            <button onClick={() => {
+              setScheduleForm({ subject: '', day: 'Senin', start_time: '', end_time: '' });
+              setEditScheduleId(null);
+              setIsScheduleModalOpen(true);
+            }} className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
               <Plus className="w-4 h-4 mr-2" />
               Tambah Jadwal
             </button>
@@ -236,8 +296,8 @@ export default function DataKelasJadwalPage() {
                             {canManageData && (
                               <td className="px-6 py-3">
                                 <div className="flex items-center justify-center gap-2">
-                                  <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit"><Edit className="w-4 h-4" /></button>
-                                  <button className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+                                  <button onClick={() => handleEditScheduleClick(schedule)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit"><Edit className="w-4 h-4" /></button>
+                                  <button onClick={() => confirmDeleteSchedule(schedule._id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                                 </div>
                               </td>
                             )}
@@ -285,8 +345,8 @@ export default function DataKelasJadwalPage() {
         <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center px-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden">
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-800">Tambah Jadwal Pelajaran</h3>
-              <button onClick={() => setIsScheduleModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+              <h3 className="font-bold text-slate-800">{editScheduleId ? 'Edit Jadwal Pelajaran' : 'Tambah Jadwal Pelajaran'}</h3>
+              <button onClick={() => { setIsScheduleModalOpen(false); setEditScheduleId(null); }} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
             </div>
             <form onSubmit={handleAddSchedule} className="p-6 space-y-4">
               <div>
@@ -310,9 +370,26 @@ export default function DataKelasJadwalPage() {
                 </div>
               </div>
               <div className="flex justify-end pt-4">
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Simpan Jadwal</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">{editScheduleId ? 'Simpan Perubahan' : 'Simpan Jadwal'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus Jadwal */}
+      {isDeleteScheduleModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm overflow-hidden text-center p-6 zoom-in-95 animate-in duration-200">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Konfirmasi Hapus</h3>
+            <p className="text-sm text-slate-500 mb-6">Apakah Anda yakin ingin menghapus jadwal pelajaran ini?</p>
+            <div className="flex justify-center gap-3">
+              <button onClick={() => { setIsDeleteScheduleModalOpen(false); setDeleteScheduleId(null); }} className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium text-sm transition-colors">Batal</button>
+              <button onClick={executeDeleteSchedule} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm transition-colors">Ya, Hapus</button>
+            </div>
           </div>
         </div>
       )}
