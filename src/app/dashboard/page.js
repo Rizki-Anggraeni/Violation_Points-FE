@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import Link from 'next/link';
 import api from '../../lib/axios';
 
+
 export default function DashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [role, setRole] = useState('');
@@ -146,11 +147,14 @@ export default function DashboardPage() {
         <div className="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h3 className="text-lg font-semibold text-slate-800">Pelanggaran Terakhir</h3>
           <div className="flex items-center gap-4">
-            <Link href="/dashboard/violations?action=new" className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-              <Plus className="w-4 h-4 mr-1.5" />
-              Catat Pelanggaran Baru
+            <Link 
+               href="/dashboard/violations?action=add"
+                className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+            >
+            <Plus className="w-5 h-5 mr-1.5" />
+              Tambah Catatan Pelanggaran
             </Link>
-            <Link href="/dashboard/violations" className="text-sm font-medium text-blue-600 hover:text-blue-700">Lihat Semua</Link>
+            <Link href="/dashboard/violations" className="text-sm font-medium text-black hover:text-blue-700">Lihat Semua</Link>
           </div>
         </div>
         <div className="overflow-x-auto">

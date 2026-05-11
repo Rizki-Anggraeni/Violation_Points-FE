@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export function middleware(request) {
+export function proxy(request) {
     // Ambil token dari cookies
     const token = request.cookies.get('token')?.value;
     const { pathname } = request.nextUrl;
