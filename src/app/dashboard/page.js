@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, AlertTriangle, TrendingUp, ShieldAlert, BarChart3, Eye, Plus, MoreVertical } from 'lucide-react';
+import { Users, AlertTriangle, TrendingUp, ShieldAlert, BarChart3, Eye, Plus, MoreVertical, BookOpen } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import api from '../../lib/axios';
 
 
@@ -12,16 +13,24 @@ export default function DashboardPage() {
   const [role, setRole] = useState('');
   const [students, setStudents] = useState([]);
   const [violations, setViolations] = useState([]);
+  const router = useRouter();
 
   useEffect(() => {
+    let currentRole = '';
     const token = localStorage.getItem('token');
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         setRole(payload.role);
+        currentRole = payload.role;
       } catch (e) {
         console.error('Gagal memproses token');
       }
+    }
+
+    if (currentRole === 'orang_tua') {
+      router.push('/dashboard/wali-murid');
+      return; // Berhenti agar tidak melakukan fetch data admin
     }
 
     const fetchDashboardData = async () => {
@@ -45,6 +54,10 @@ export default function DashboardPage() {
 
   if (role === 'wali_kelas' || role === 'sekretaris') {
     return <WaliKelasDashboard role={role} />;
+  }
+
+  if (role === 'orang_tua') {
+    return null;
   }
 
   // Kalkulasi Data Admin/Guru BK
@@ -261,6 +274,18 @@ function WaliKelasDashboard({ role }) {
 
   return (
     <div className="space-y-6">
+      {/* Welcome & Quick Action */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Dashboard {role === 'wali_kelas' ? 'Wali Kelas' : 'Sekretaris'}</h2>
+          <p className="text-sm text-slate-500 mt-1">Pantau statistik dan kehadiran siswa di kelas Anda.</p>
+        </div>
+        <Link href="/dashboard/classes" className="inline-flex items-center justify-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors shadow-sm w-full sm:w-auto">
+          <BookOpen className="w-4 h-4 mr-2" />
+          Lihat Jadwal Kelas
+        </Link>
+      </div>
+
       {/* Row 1: Grid Statistik Modern */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Total Siswa Kelas" value={totalSiswa} icon={Users} color="text-slate-600" bg="bg-slate-50" />
@@ -346,13 +371,14 @@ function WaliKelasDashboard({ role }) {
             <tbody className="text-sm text-slate-700 divide-y divide-slate-50">
               {wkViolations.map((item, index) => {
                 // Mendapatkan inisial dari nama (Contoh: "Budi Santoso" -> "BS")
-                const initials = item.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                const studentName = item.student_id?.name || 'Siswa Dihapus';
+                const initials = studentName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
                 let badgeColor = 'bg-indigo-100 text-indigo-700';
                 if (item.category === 'Sedang') badgeColor = 'bg-amber-100 text-amber-700';
                 if (item.category === 'Berat') badgeColor = 'bg-red-100 text-red-700';
 
                 return (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={item._id || index} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-6 py-4 text-slate-500">{index + 1}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center">

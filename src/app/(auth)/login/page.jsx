@@ -36,7 +36,7 @@ export default function LoginPage() {
 
       // Arahkan user sesuai dengan role-nya
       if (userRole === 'orang_tua') {
-        router.push('/dashboard/ortu');
+        router.push('/dashboard/wali-murid');
       } else {
         router.push('/dashboard');
       }

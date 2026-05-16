@@ -112,11 +112,23 @@ export default function PresensiPage() {
         });
       });
 
-      await Promise.all(promises);
+      const results = await Promise.allSettled(promises);
+      
+      const errors = results.filter(res => res.status === 'rejected');
+      if (errors.length > 0) {
+        const firstError = errors[0].reason;
+        if (firstError.response && firstError.response.data && firstError.response.data.message) {
+          alert(`Gagal menyimpan: ${firstError.response.data.message}`);
+        } else {
+          alert('Gagal menyimpan beberapa data presensi.');
+        }
+        return; // Hentikan agar tidak memunculkan alert sukses
+      }
+      
       alert('Presensi berhasil disimpan!');
     } catch (error) {
-      console.error('Gagal menyimpan:', error);
-      alert(error.response?.data?.message || 'Gagal menyimpan presensi. Pastikan Anda menginput di waktu yang sesuai.');
+      console.error('Terjadi kesalahan fatal:', error);
+      alert('Terjadi kesalahan sistem, silakan coba lagi.');
     } finally {
       setIsSubmitting(false);
     }

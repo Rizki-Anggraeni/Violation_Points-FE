@@ -8,12 +8,18 @@ import {
   Calendar, 
   ShieldAlert, 
   Clock, 
-  Info
+  Info,
+  ChevronLeft,
+  ChevronRight,
+  XCircle,
+  CheckCircle
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 export default function DashboardWaliMurid() {
   const [activeTab, setActiveTab] = useState('pelanggaran');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   // Mock Data (Dalam implementasi asli, ini diambil melalui API)
   const student = {
@@ -66,6 +72,53 @@ export default function DashboardWaliMurid() {
     const message = encodeURIComponent(`Halo Pak/Bu ${student.homeroomTeacher}, saya orang tua dari ${student.name} (${student.className}) ingin berdiskusi mengenai perkembangan anak saya di sekolah...`);
     window.open(`https://wa.me/${student.homeroomPhone}?text=${message}`, '_blank');
   };
+
+  // --- LOGIKA KALENDER & JADWAL ---
+  const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+
+  const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+  const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
+  const calendarDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const DAYS_HEADER = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+  const isToday = (day) => {
+    const today = new Date();
+    return day === today.getDate() && currentMonth.getMonth() === today.getMonth() && currentMonth.getFullYear() === today.getFullYear();
+  };
+
+  const isSelected = (day) => {
+    return day === selectedDate.getDate() && currentMonth.getMonth() === selectedDate.getMonth() && currentMonth.getFullYear() === selectedDate.getFullYear();
+  };
+
+  const handleDayClick = (day) => {
+    setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day));
+  };
+
+  // Mock Function - Data Jadwal & Presensi Harian
+  const getSchedule = (date, siswaId) => {
+    const day = date.getDay(); // 0 = Minggu, 1 = Senin, dst.
+    if (day === 0 || day === 6) return []; // Asumsi Sabtu/Minggu libur
+
+    if (day === 1) { // Simulasi Jadwal Hari Senin
+      return [
+        { id: 1, period: '1-2', time: '07:00 - 08:30', subject: 'Pemrograman Web', teacher: 'Bpk. Agung Rizki', status: 'Hadir' },
+        { id: 2, period: '3-4', time: '08:30 - 10:00', subject: 'Basis Data', teacher: 'Ibu Rina', status: 'Hadir' },
+        { id: 3, period: '5-6', time: '10:15 - 11:45', subject: 'Bahasa Indonesia', teacher: 'Bpk. Joko', status: 'Alpa' },
+        { id: 4, period: '7-8', time: '12:30 - 14:00', subject: 'Matematika', teacher: 'Ibu Siti', status: 'Belum Mulai' },
+      ];
+    }
+    // Simulasi Jadwal Hari Lainnya
+    return [
+      { id: 5, period: '1-3', time: '07:00 - 09:15', subject: 'PBO', teacher: 'Bpk. Hendra', status: 'Hadir' },
+      { id: 6, period: '4-5', time: '09:30 - 11:00', subject: 'PKN', teacher: 'Ibu Susi', status: 'Belum Mulai' },
+    ];
+  };
+
+  const currentSchedules = getSchedule(selectedDate, student.nis);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
@@ -236,6 +289,96 @@ export default function DashboardWaliMurid() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Fitur Baru: Kalender & Jadwal Interaktif */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Kolom Kiri: Widget Kalender */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-800 flex items-center">
+                <Calendar className="w-4 h-4 mr-2 text-indigo-500" />
+                Pilih Tanggal
+              </h3>
+              <div className="flex items-center space-x-2">
+                <button onClick={prevMonth} className="p-1 hover:bg-slate-100 rounded-md text-slate-500 transition-colors">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-xs font-bold text-slate-700 w-20 text-center">
+                  {MONTHS[currentMonth.getMonth()].substring(0, 3)} {currentMonth.getFullYear()}
+                </span>
+                <button onClick={nextMonth} className="p-1 hover:bg-slate-100 rounded-md text-slate-500 transition-colors">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1 text-center mb-2">
+              {DAYS_HEADER.map(day => (
+                <div key={day} className="text-[10px] font-bold text-slate-400 py-1">{day}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {blanks.map(blank => (
+                <div key={`blank-${blank}`} className="p-1"></div>
+              ))}
+              {calendarDays.map(day => (
+                <button
+                  key={day}
+                  onClick={() => handleDayClick(day)}
+                  className={`p-1.5 w-full aspect-square flex items-center justify-center rounded-lg text-xs font-bold transition-all duration-200
+                    ${isSelected(day) 
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
+                      : isToday(day) 
+                        ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' 
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }
+                  `}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Kolom Kanan: List Jadwal Pelajaran */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800">Jadwal & Presensi</h3>
+              <span className="text-xs font-semibold text-slate-500">
+                {selectedDate.getDate()} {MONTHS[selectedDate.getMonth()].substring(0, 3)}
+              </span>
+            </div>
+            <div className="flex-1 p-4 overflow-y-auto max-h-[280px] custom-scrollbar space-y-3">
+              {currentSchedules.length > 0 ? (
+                currentSchedules.map((sch) => (
+                  <div key={sch.id} className="flex gap-3 p-3 rounded-xl border border-slate-100 bg-white hover:bg-slate-50 transition-colors">
+                    <div className="flex flex-col items-center justify-center w-11 h-11 rounded-lg bg-indigo-50 text-indigo-600 flex-shrink-0">
+                      <span className="text-[9px] font-bold uppercase">Jam</span>
+                      <span className="text-sm font-extrabold">{sch.period}</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-sm text-slate-800 leading-tight">{sch.subject}</h4>
+                      <p className="text-[11px] font-medium text-slate-500 mt-0.5">{sch.time} • {sch.teacher}</p>
+                    </div>
+                    <div className="flex items-start">
+                      {sch.status === 'Hadir' && <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><CheckCircle className="w-3 h-3 mr-1" /> Hadir</span>}
+                      {sch.status === 'Alpa' && <span title="Berpotensi menambah poin pelanggaran" className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-800 border border-red-200 cursor-help"><XCircle className="w-3 h-3 mr-1" /> Alpa</span>}
+                      {sch.status === 'Belum Mulai' && <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200"><Clock className="w-3 h-3 mr-1" /> Belum Mulai</span>}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center py-8 text-center">
+                  <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                    <Calendar className="w-6 h-6 text-slate-300" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-600">Libur / Kosong</p>
+                  <p className="text-xs text-slate-400 mt-1">Tidak ada jadwal tercatat.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

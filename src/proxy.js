@@ -18,16 +18,21 @@ export function proxy(request) {
 
         // 1. Pengecekan khusus untuk role 'orang_tua'
         if (userRole === 'orang_tua') {
-            if (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/ortu')) {
-                const url = new URL('/dashboard/ortu', request.url);
+            // Redirect mulus tanpa pesan error jika mengakses root /dashboard
+            if (pathname === '/dashboard') {
+                return NextResponse.redirect(new URL('/dashboard/wali-murid', request.url));
+            }
+            // Tampilkan error HANYA jika mencoba mengakses sub-halaman khusus peran lain (misal: /dashboard/teachers)
+            if (pathname.startsWith('/dashboard/') && !pathname.startsWith('/dashboard/wali-murid')) {
+                const url = new URL('/dashboard/wali-murid', request.url);
                 url.searchParams.set('error', 'unauthorized');
                 return NextResponse.redirect(url);
             }
             return NextResponse.next();
         } 
         
-        // 2. Blokir akses ke URL /dashboard/ortu untuk role selain orang_tua
-        if (pathname.startsWith('/dashboard/ortu')) {
+        // 2. Blokir akses ke URL /dashboard/wali-murid untuk role selain orang_tua
+        if (pathname.startsWith('/dashboard/wali-murid')) {
             const url = new URL('/dashboard', request.url);
             url.searchParams.set('error', 'unauthorized');
             return NextResponse.redirect(url);
