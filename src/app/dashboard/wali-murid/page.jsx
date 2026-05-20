@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   UserCircle, 
   CheckCircle2, 
@@ -15,41 +15,124 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import api from '../../../lib/axios';
 
 export default function DashboardWaliMurid() {
   const [activeTab, setActiveTab] = useState('pelanggaran');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Mock Data (Dalam implementasi asli, ini diambil melalui API)
+  // State untuk API Data
+  const [studentData, setStudentData] = useState(null);
+  const [attendances, setAttendances] = useState([]);
+  const [violations, setViolations] = useState([]);
+  const [schedules, setSchedules] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [stuRes, attRes, vioRes, schRes] = await Promise.all([
+          api.get('/students').catch(() => ({ data: [] })),
+          api.get('/attendances').catch(() => ({ data: [] })),
+          api.get('/violations').catch(() => ({ data: [] })),
+          api.get('/schedules').catch(() => ({ data: [] }))
+        ]);
+        
+        let currentStudent = null;
+        if (stuRes.data && Array.isArray(stuRes.data) && stuRes.data.length > 0) {
+          currentStudent = stuRes.data[0];
+          setStudentData(currentStudent);
+        } else if (stuRes.data && !Array.isArray(stuRes.data) && stuRes.data._id) {
+          currentStudent = stuRes.data;
+          setStudentData(currentStudent);
+        }
+
+        if (attRes.data && Array.isArray(attRes.data)) {
+          setAttendances(attRes.data.sort((a, b) => new Date(b.date) - new Date(a.date)));
+        }
+        if (vioRes.data && Array.isArray(vioRes.data)) {
+          setViolations(vioRes.data.sort((a, b) => new Date(b.date) - new Date(a.date)));
+        }
+
+        if (currentStudent && currentStudent.class_id) {
+          const classId = currentStudent.class_id._id || currentStudent.class_id;
+          const mySchedules = (schRes.data || []).filter(s => (s.class_id?._id || s.class_id) === classId);
+          setSchedules(mySchedules);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!studentData) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm text-center max-w-lg w-full">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Data Siswa Tidak Ditemukan</h2>
+          <p className="text-slate-500">Akun Anda belum dihubungkan dengan data siswa yang valid. Silakan hubungi admin sekolah.</p>
+        </div>
+      </div>
+    );
+  }
+
   const student = {
-    name: 'Ahmad Budi Santoso',
-    nis: '202310045',
-    className: 'XI RPL 1',
-    homeroomTeacher: 'Bpk. Hendra Wijaya',
+    name: studentData.name,
+    nis: studentData.nis,
+    className: studentData.class_id?.name || '-',
+    homeroomTeacher: 'Wali Kelas',
     homeroomPhone: '6281234567890',
-    violationPoints: 15,
+    violationPoints: studentData.total_points || 0,
     maxPoints: 100,
   };
 
-  const todayAttendance = {
-    status: 'Hadir',
-    time: '06:45 WIB',
-    message: 'Anak Anda sudah berada di sekolah'
+  // Presensi Hari Ini
+  const todayStr = new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+  const todayAttendances = attendances.filter(a => new Date(a.date).toISOString().split('T')[0] === todayStr);
+  const latestTodayAttendance = todayAttendances.length > 0 ? todayAttendances[0] : null;
+
+  const todayAttendance = latestTodayAttendance ? {
+    status: latestTodayAttendance.status,
+    time: new Date(latestTodayAttendance.createdAt || latestTodayAttendance.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+    message: `Tercatat pada pelajaran ${latestTodayAttendance.schedule_id?.subject || '-'}`
+  } : {
+    status: 'Belum Ada',
+    time: '-',
+    message: 'Belum ada catatan kehadiran untuk tanggal ini'
   };
 
-  const recentViolations = [
-    { id: 1, date: '2026-05-10', rule: 'Terlambat masuk jam pelajaran pertama', points: 10 },
-    { id: 2, date: '2026-05-02', rule: 'Atribut seragam tidak lengkap (Dasi)', points: 5 },
-  ];
+  const recentViolations = violations.slice(0, 5);
 
-  const weeklyAttendance = [
-    { day: 'Senin', status: 'Hadir', date: '04 Mei' },
-    { day: 'Selasa', status: 'Hadir', date: '05 Mei' },
-    { day: 'Rabu', status: 'Hadir', date: '06 Mei' },
-    { day: 'Kamis', status: 'Sakit', date: '07 Mei' },
-    { day: 'Jumat', status: 'Hadir', date: '08 Mei' },
-  ];
+  // Riwayat Kehadiran 5 Hari Terakhir (Unik per Hari)
+  const uniqueDates = [];
+  const weeklyAttendance = [];
+  attendances.forEach(a => {
+    const dateStr = new Date(a.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' });
+    if (!uniqueDates.includes(dateStr) && weeklyAttendance.length < 5) {
+      uniqueDates.push(dateStr);
+      weeklyAttendance.push({
+        day: new Date(a.date).toLocaleDateString('id-ID', { weekday: 'long' }),
+        date: new Date(a.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
+        status: a.status
+      });
+    }
+  });
 
   // Kalkulasi poin & status
   const remainingPoints = student.maxPoints - student.violationPoints;
@@ -98,27 +181,47 @@ export default function DashboardWaliMurid() {
     setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day));
   };
 
-  // Mock Function - Data Jadwal & Presensi Harian
-  const getSchedule = (date, siswaId) => {
-    const day = date.getDay(); // 0 = Minggu, 1 = Senin, dst.
-    if (day === 0 || day === 6) return []; // Asumsi Sabtu/Minggu libur
+  // Fungsi untuk mendapatkan status jadwal real-time dari presensi
+  const getScheduleStatus = (schedule) => {
+    const isTodaySchedule = selectedDate.toDateString() === new Date().toDateString();
+    const selectedDateStr = new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    
+    const att = attendances.find(a => 
+      (a.schedule_id?._id || a.schedule_id) === schedule._id && 
+      new Date(a.date).toISOString().split('T')[0] === selectedDateStr
+    );
 
-    if (day === 1) { // Simulasi Jadwal Hari Senin
-      return [
-        { id: 1, period: '1-2', time: '07:00 - 08:30', subject: 'Pemrograman Web', teacher: 'Bpk. Agung Rizki', status: 'Hadir' },
-        { id: 2, period: '3-4', time: '08:30 - 10:00', subject: 'Basis Data', teacher: 'Ibu Rina', status: 'Hadir' },
-        { id: 3, period: '5-6', time: '10:15 - 11:45', subject: 'Bahasa Indonesia', teacher: 'Bpk. Joko', status: 'Alpa' },
-        { id: 4, period: '7-8', time: '12:30 - 14:00', subject: 'Matematika', teacher: 'Ibu Siti', status: 'Belum Mulai' },
-      ];
+    if (att) return att.status;
+    
+    if (isTodaySchedule) {
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const [startH, startM] = (schedule.start_time || '00:00').split(':').map(Number);
+      if (currentMinutes < startH * 60 + startM) {
+        return 'Belum Mulai';
+      }
     }
-    // Simulasi Jadwal Hari Lainnya
-    return [
-      { id: 5, period: '1-3', time: '07:00 - 09:15', subject: 'PBO', teacher: 'Bpk. Hendra', status: 'Hadir' },
-      { id: 6, period: '4-5', time: '09:30 - 11:00', subject: 'PKN', teacher: 'Ibu Susi', status: 'Belum Mulai' },
-    ];
+    return 'Belum Ada Info';
   };
 
-  const currentSchedules = getSchedule(selectedDate, student.nis);
+  // Data Jadwal & Presensi Harian dari Backend
+  const getSchedule = (date) => {
+    const daysList = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const dayName = daysList[date.getDay()];
+    
+    return schedules.filter(s => s.day === dayName)
+      .sort((a,b) => (a.start_time || '').localeCompare(b.start_time || ''))
+      .map((sch, idx) => ({
+        id: sch._id || idx,
+        period: idx + 1,
+        time: `${sch.start_time} - ${sch.end_time}`,
+        subject: sch.subject,
+        teacher: '-', // Belum disediakan dari backend jadwal default saat ini
+        status: getScheduleStatus(sch)
+      }));
+  };
+
+  const currentSchedules = getSchedule(selectedDate);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
@@ -146,12 +249,12 @@ export default function DashboardWaliMurid() {
         {/* Card Kehadiran Hari Ini */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-5 flex items-start gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-            <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+            {todayAttendance.status === 'Belum Ada' ? <Clock className="w-6 h-6 text-slate-500" /> : <CheckCircle2 className="w-6 h-6 text-emerald-600" />}
           </div>
           <div>
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              Kehadiran Hari Ini
-              <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-semibold">
+              Kehadiran {isToday(selectedDate.getDate()) ? 'Hari Ini' : 'Terpilih'}
+              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ml-2 ${todayAttendance.status === 'Belum Ada' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-700'}`}>
                 {todayAttendance.status}
               </span>
             </h3>
@@ -235,13 +338,13 @@ export default function DashboardWaliMurid() {
             {activeTab === 'pelanggaran' && (
               <div className="divide-y divide-slate-100">
                 {recentViolations.length > 0 ? (
-                  recentViolations.map((v) => (
-                    <div key={v.id} className="p-4 md:p-5 flex items-start gap-4 hover:bg-slate-50 transition-colors">
+                  recentViolations.map((v, idx) => (
+                    <div key={v._id || idx} className="p-4 md:p-5 flex items-start gap-4 hover:bg-slate-50 transition-colors">
                       <div className="w-10 h-10 rounded-lg bg-red-50 flex flex-shrink-0 items-center justify-center mt-1">
-                        <span className="text-red-600 font-bold text-sm">-{v.points}</span>
+                        <span className="text-red-600 font-bold text-sm">-{v.rule_id?.points || 0}</span>
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-semibold text-slate-700 text-sm">{v.rule}</h4>
+                        <h4 className="font-semibold text-slate-700 text-sm">{v.rule_id?.violation_name || 'Pelanggaran'}</h4>
                         <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
                           <Clock className="w-3.5 h-3.5" />
                           {new Date(v.date).toLocaleDateString('id-ID', { 
@@ -264,28 +367,32 @@ export default function DashboardWaliMurid() {
               <div className="p-4 md:p-6">
                 <h4 className="text-sm font-bold text-slate-700 mb-4 text-center">Kehadiran 1 Minggu Terakhir</h4>
                 <div className="flex flex-col gap-3">
-                  {weeklyAttendance.map((record, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2 h-8 rounded-full ${
-                          record.status === 'Hadir' ? 'bg-emerald-500' :
-                          record.status === 'Sakit' ? 'bg-amber-500' : 
-                          record.status === 'Izin' ? 'bg-blue-500' : 'bg-red-500'
-                        }`}></div>
-                        <div>
-                          <p className="font-bold text-slate-700 text-sm">{record.day}</p>
-                          <p className="text-xs text-slate-500">{record.date}</p>
+                  {weeklyAttendance.length > 0 ? (
+                    weeklyAttendance.map((record, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-8 rounded-full ${
+                            record.status === 'Hadir' ? 'bg-emerald-500' :
+                            record.status === 'Sakit' ? 'bg-amber-500' : 
+                            record.status === 'Izin' ? 'bg-blue-500' : 'bg-red-500'
+                          }`}></div>
+                          <div>
+                            <p className="font-bold text-slate-700 text-sm">{record.day}</p>
+                            <p className="text-xs text-slate-500">{record.date}</p>
+                          </div>
+                        </div>
+                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          record.status === 'Hadir' ? 'bg-emerald-100 text-emerald-700' :
+                          record.status === 'Sakit' ? 'bg-amber-100 text-amber-700' : 
+                          record.status === 'Izin' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {record.status}
                         </div>
                       </div>
-                      <div className={`px-3 py-1 rounded-full text-xs font-bold ${
-                         record.status === 'Hadir' ? 'bg-emerald-100 text-emerald-700' :
-                         record.status === 'Sakit' ? 'bg-amber-100 text-amber-700' : 
-                         record.status === 'Izin' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {record.status}
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-center text-sm text-slate-500 py-4">Belum ada data kehadiran.</p>
+                  )}
                 </div>
               </div>
             )}
@@ -362,10 +469,13 @@ export default function DashboardWaliMurid() {
                       <h4 className="font-bold text-sm text-slate-800 leading-tight">{sch.subject}</h4>
                       <p className="text-[11px] font-medium text-slate-500 mt-0.5">{sch.time} • {sch.teacher}</p>
                     </div>
-                    <div className="flex items-start">
+                    <div className="flex items-start gap-1 flex-wrap justify-end">
                       {sch.status === 'Hadir' && <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><CheckCircle className="w-3 h-3 mr-1" /> Hadir</span>}
                       {sch.status === 'Alpa' && <span title="Berpotensi menambah poin pelanggaran" className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-800 border border-red-200 cursor-help"><XCircle className="w-3 h-3 mr-1" /> Alpa</span>}
+                      {sch.status === 'Sakit' && <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200"><Info className="w-3 h-3 mr-1" /> Sakit</span>}
+                      {sch.status === 'Izin' && <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200"><Info className="w-3 h-3 mr-1" /> Izin</span>}
                       {sch.status === 'Belum Mulai' && <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200"><Clock className="w-3 h-3 mr-1" /> Belum Mulai</span>}
+                      {sch.status === 'Belum Ada Info' && <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200"><Info className="w-3 h-3 mr-1" /> Belum Ada Info</span>}
                     </div>
                   </div>
                 ))

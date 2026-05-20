@@ -11,6 +11,7 @@ const STATUS_OPTIONS = [
   { key: 'Alpa', alias: 'A', color: 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', active: 'bg-red-500 text-white border-red-500' },
 ];
 
+const DAYS_OF_WEEK = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const DAYS_HEADER = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
@@ -38,8 +39,11 @@ export default function PresensiPage() {
         ]);
         setSchedules(schRes.data);
         setStudents(stuRes.data);
-        if (schRes.data.length > 0) {
-          setSelectedSchedule(schRes.data[0]);
+        
+        const currentDayName = DAYS_OF_WEEK[new Date().getDay()];
+        const initialFilteredSchedules = schRes.data.filter(s => s.day === currentDayName);
+        if (initialFilteredSchedules.length > 0) {
+          setSelectedSchedule(initialFilteredSchedules[0]);
         }
       } catch (error) {
         console.error('Gagal memuat data:', error);
@@ -69,8 +73,17 @@ export default function PresensiPage() {
   };
 
   const handleDayClick = (day) => {
-    setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day));
+    const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    setSelectedDate(newDate);
+    
+    const dayName = DAYS_OF_WEEK[newDate.getDay()];
+    const availableSchedules = schedules.filter(s => s.day === dayName);
+    setSelectedSchedule(availableSchedules.length > 0 ? availableSchedules[0] : null);
   };
+
+  // Filter jadwal berdasarkan hari yang dipilih
+  const selectedDayName = DAYS_OF_WEEK[selectedDate.getDay()];
+  const filteredSchedules = schedules.filter(schedule => schedule.day === selectedDayName);
 
   // Filter siswa berdasarkan kelas dari jadwal yang dipilih
   const filteredStudents = selectedSchedule 
@@ -202,14 +215,14 @@ export default function PresensiPage() {
           <div className="flex-1 overflow-auto p-4">
             {isLoading ? (
                <div className="flex justify-center py-10"><Loader2 className="animate-spin text-emerald-500 w-8 h-8" /></div>
-            ) : schedules.length === 0 ? (
+            ) : filteredSchedules.length === 0 ? (
                <div className="text-center py-10 text-slate-400">
                  <AlertCircle className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                 <p className="text-sm">Tidak ada jadwal tersedia.</p>
+                 <p className="text-sm">Tidak ada jadwal tersedia pada hari ini.</p>
                </div>
             ) : (
               <div className="space-y-3">
-              {schedules.map((schedule) => {
+              {filteredSchedules.map((schedule) => {
                 const isActive = selectedSchedule?._id === schedule._id;
                 return (
                   <div 
