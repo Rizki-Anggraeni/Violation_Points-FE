@@ -171,7 +171,7 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
 
       {/* Modal Export Rekap Presensi */}
       {isExportModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center px-4">
+        <div className="fixed inset-0 bg-slate-900/50 z-100 flex items-center justify-center px-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100">
               <h3 className="font-bold text-slate-800">Export Rekap Presensi</h3>
@@ -200,7 +200,7 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
 
       {/* Modal Ganti Password */}
       {isPasswordModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center px-4">
+        <div className="fixed inset-0 bg-slate-900/50 z-100 flex items-center justify-center px-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative">
             <button 
               onClick={() => setIsPasswordModalOpen(false)} 

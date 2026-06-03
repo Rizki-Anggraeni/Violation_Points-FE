@@ -240,7 +240,7 @@ export default function DashboardWaliMurid() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
       {/* Header Mobile-Friendly */}
-      <div className="bg-gradient-to-br from-sky-600 to-indigo-700 pt-8 pb-16 px-4 md:px-8 rounded-b-3xl shadow-md">
+      <div className="bg-linear-to-br from-sky-600 to-indigo-700 pt-8 pb-16 px-4 md:px-8 rounded-b-3xl shadow-md">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-white text-xl md:text-2xl font-bold mb-6 text-center md:text-left">
             Portal Orang Tua
@@ -250,7 +250,7 @@ export default function DashboardWaliMurid() {
             <div className="relative">
               <button 
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-20 h-20 bg-white rounded-full p-1 flex-shrink-0 shadow-lg cursor-pointer hover:scale-105 transition-transform relative z-10"
+                className="w-20 h-20 bg-white rounded-full p-1 shrink-0 shadow-lg cursor-pointer hover:scale-105 transition-transform relative z-10"
               >
                 <UserCircle className="w-full h-full text-slate-300" />
               </button>
@@ -289,7 +289,7 @@ export default function DashboardWaliMurid() {
 
       {/* Modal Ganti Password */}
       {isPasswordModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center px-4">
+        <div className="fixed inset-0 bg-slate-900/50 z-100 flex items-center justify-center px-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative">
             <button 
               onClick={() => setIsPasswordModalOpen(false)} 
@@ -308,7 +308,7 @@ export default function DashboardWaliMurid() {
         
         {/* Card Kehadiran Hari Ini */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-5 flex items-start gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
             {todayAttendance.status === 'Belum Ada' ? <Clock className="w-6 h-6 text-slate-500" /> : <CheckCircle2 className="w-6 h-6 text-emerald-600" />}
           </div>
           <div>
@@ -330,7 +330,7 @@ export default function DashboardWaliMurid() {
             <h3 className="font-bold text-slate-800">Perilaku Siswa</h3>
           </div>
           
-          <div className="h-48 w-full max-w-[250px] mt-6 relative">
+          <div className="h-48 w-full max-w-62.5 mt-6 relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -400,7 +400,7 @@ export default function DashboardWaliMurid() {
                 {recentViolations.length > 0 ? (
                   recentViolations.map((v, idx) => (
                     <div key={v._id || idx} className="p-4 md:p-5 flex items-start gap-4 hover:bg-slate-50 transition-colors">
-                      <div className="w-10 h-10 rounded-lg bg-red-50 flex flex-shrink-0 items-center justify-center mt-1">
+                      <div className="w-10 h-10 rounded-lg bg-red-50 flex shrink-0 items-center justify-center mt-1">
                         <span className="text-red-600 font-bold text-sm">-{v.rule_id?.points || 0}</span>
                       </div>
                       <div className="flex-1">
@@ -517,11 +517,11 @@ export default function DashboardWaliMurid() {
                 {selectedDate.getDate()} {MONTHS[selectedDate.getMonth()].substring(0, 3)}
               </span>
             </div>
-            <div className="flex-1 p-4 overflow-y-auto max-h-[280px] custom-scrollbar space-y-3">
+            <div className="flex-1 p-4 overflow-y-auto max-h-70 custom-scrollbar space-y-3">
               {currentSchedules.length > 0 ? (
                 currentSchedules.map((sch) => (
                   <div key={sch.id} className="flex gap-3 p-3 rounded-xl border border-slate-100 bg-white hover:bg-slate-50 transition-colors">
-                    <div className="flex flex-col items-center justify-center w-11 h-11 rounded-lg bg-indigo-50 text-indigo-600 flex-shrink-0">
+                    <div className="flex flex-col items-center justify-center w-11 h-11 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
                       <span className="text-[9px] font-bold uppercase">Jam</span>
                       <span className="text-sm font-extrabold">{sch.period}</span>
                     </div>
@@ -555,7 +555,7 @@ export default function DashboardWaliMurid() {
         {/* Fitur Kontak WhatsApp */}
         <button 
           onClick={handleWhatsAppContact}
-          className="w-full bg-gradient-to-r from-sky-500 to-indigo-600 text-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-between group"
+          className="w-full bg-linear-to-r from-sky-500 to-indigo-600 text-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-between group"
         >
           <div className="flex items-center gap-4 text-left">
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform">

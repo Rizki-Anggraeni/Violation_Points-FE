@@ -246,7 +246,7 @@ export default function OrtuDashboardPage() {
                         {v.description && <div className="text-xs text-slate-500 mt-1 italic line-clamp-1">"{v.description}"</div>}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className="inline-flex items-center justify-center bg-red-100 text-red-700 font-bold px-2.5 py-1 rounded-full text-xs min-w-75">
+                        <span className="inline-flex items-center justify-center bg-red-100 text-red-700 font-bold px-2.5 py-1 rounded-full text-xs min-w-12">
                           +{v.rule_id?.points || 0}
                         </span>
                       </td>
