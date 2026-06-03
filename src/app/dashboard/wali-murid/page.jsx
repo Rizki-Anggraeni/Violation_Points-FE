@@ -12,10 +12,15 @@ import {
   ChevronLeft,
   ChevronRight,
   XCircle,
-  CheckCircle
+  CheckCircle,
+  LogOut,
+  Key,
+  X
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import api from '../../../lib/axios';
+import { useRouter } from 'next/navigation';
+import ChangePassword from '../../../components/ChangePassword';
 
 export default function DashboardWaliMurid() {
   const [activeTab, setActiveTab] = useState('pelanggaran');
@@ -28,6 +33,9 @@ export default function DashboardWaliMurid() {
   const [violations, setViolations] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -156,6 +164,12 @@ export default function DashboardWaliMurid() {
     window.open(`https://wa.me/${student.homeroomPhone}?text=${message}`, '_blank');
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    router.push('/login');
+  };
+
   // --- LOGIKA KALENDER & JADWAL ---
   const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
@@ -232,17 +246,63 @@ export default function DashboardWaliMurid() {
             Portal Orang Tua
           </h1>
           
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-left">
-            <div className="w-20 h-20 bg-white rounded-full p-1 flex-shrink-0 shadow-lg">
-              <UserCircle className="w-full h-full text-slate-300" />
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-left relative">
+            <div className="relative">
+              <button 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-20 h-20 bg-white rounded-full p-1 flex-shrink-0 shadow-lg cursor-pointer hover:scale-105 transition-transform relative z-10"
+              >
+                <UserCircle className="w-full h-full text-slate-300" />
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute left-1/2 md:left-0 -translate-x-1/2 md:translate-x-0 mt-2 w-48 bg-white text-slate-800 rounded-lg shadow-xl border border-slate-100 z-50 overflow-hidden">
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        setIsPasswordModalOpen(true);
+                      }}
+                      className="w-full flex items-center px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      <Key className="w-4 h-4 mr-2 text-slate-500" />
+                      Ganti Password
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Log Out
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="text-white">
+            <div className="text-white mt-2 md:mt-0">
               <h2 className="text-2xl font-bold">{student.name}</h2>
               <p className="text-sky-100 font-medium">{student.nis} • Kelas {student.className}</p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal Ganti Password */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center px-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative">
+            <button 
+              onClick={() => setIsPasswordModalOpen(false)} 
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 z-10"
+            >
+              <X size={20} />
+            </button>
+            <div className="p-2 pt-6">
+               <ChangePassword />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-3xl mx-auto px-4 md:px-8 -mt-8 space-y-6">
         

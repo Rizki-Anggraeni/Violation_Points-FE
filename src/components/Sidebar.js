@@ -13,8 +13,10 @@ import {
   X,
   CheckSquare,
   FileText,
-  Table
+  Table,
+  Key
 } from 'lucide-react';
+import ChangePassword from './ChangePassword';
 
 export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
   const pathname = usePathname();
@@ -24,6 +26,7 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
     laporan: false
   });
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const toggleDropdown = (key) => {
     setOpenDropdowns((prev) => ({
@@ -144,8 +147,18 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
         </nav>
       </div>
 
-      {/* Tombol Logout */}
-      <div className="p-4 bg-white border-t border-slate-100 mt-auto">
+      {/* Tombol Aksi Bawah */}
+      <div className="p-4 bg-white border-t border-slate-100 mt-auto space-y-2">
+        <button
+          onClick={() => {
+            if (setIsOpen) setIsOpen(false);
+            setIsPasswordModalOpen(true);
+          }}
+          className="flex items-center justify-center w-full px-4 py-2.5 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 hover:text-blue-600 transition-colors"
+        >
+          <Key className="w-5 h-5 mr-2" />
+          Ganti Password
+        </button>
         <button
           onClick={onLogout}
           className="flex items-center justify-center w-full px-4 py-2.5 text-sm font-medium text-slate-600 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors"
@@ -180,6 +193,23 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
                   <span className="text-[10px] font-medium text-emerald-500/80">Spreadsheet</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ganti Password */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center px-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative">
+            <button 
+              onClick={() => setIsPasswordModalOpen(false)} 
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 z-10"
+            >
+              <X size={20} />
+            </button>
+            <div className="p-2 pt-6">
+               <ChangePassword />
             </div>
           </div>
         </div>
