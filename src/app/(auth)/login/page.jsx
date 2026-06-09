@@ -103,7 +103,7 @@ export default function LoginPage() {
 
           {/* Pesan Error */}
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl p-3 text-center animate-in fade-in duration-300">
+            <div className="mb-6 bg-red-50 border border-red-200 text-red-600 text-sm rounded-md -xl p-3 text-center animate-in fade-in duration-300">
               {error}
             </div>
           )}
@@ -124,7 +124,7 @@ export default function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Masukkan username Anda"
-                  className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm text-slate-800 placeholder-slate-400 shadow-sm"
+                  className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm text-slate-800 placeholder-slate-400 shadow-sm"
                   required
                 />
                 {/* Indikator Centang Hijau jika terisi */}
@@ -149,7 +149,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm text-slate-800 placeholder-slate-400 shadow-sm"
+                  className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm text-slate-800 placeholder-slate-400 shadow-sm"
                   required
                 />
               </div>
@@ -160,7 +160,7 @@ export default function LoginPage() {
               <label className="flex items-center gap-2 cursor-pointer group">
                 <input 
                   type="checkbox" 
-                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30 transition-colors cursor-pointer"
+                  className="w-4 h-4 rounded-md  border-slate-300 text-blue-600 focus:ring-blue-500/30 transition-colors cursor-pointer"
                 />
                 <span className="text-sm font-medium text-slate-500 group-hover:text-slate-800 transition-colors">
                   Remember Me
@@ -176,7 +176,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex-1 py-3.5 px-6 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold rounded-full shadow-lg shadow-blue-500/30 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center"
+                className="flex-1 py-3.5 px-6 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold rounded-md -full shadow-lg shadow-blue-500/30 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center"
               >
                 {isLoading ? (
                   <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -189,7 +189,7 @@ export default function LoginPage() {
               </button>
               <button
                 type="button"
-                className="flex-1 py-3.5 px-6 bg-white border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] text-slate-700 font-semibold rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-slate-200"
+                className="flex-1 py-3.5 px-6 bg-white border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] text-slate-700 font-semibold rounded-md -full transition-all focus:outline-none focus:ring-2 focus:ring-slate-200"
               >
                 Create Account
               </button>

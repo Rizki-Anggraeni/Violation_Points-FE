@@ -97,6 +97,8 @@ export default function OrtuDashboardPage() {
     { name: 'Izin', value: attCount.Izin, fill: '#3b82f6' },
     { name: 'Alpa', value: attCount.Alpa, fill: '#ef4444' },
   ];
+  
+  const filteredPieData = attendancePieData.filter(item => item.value > 0);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -210,15 +212,25 @@ export default function OrtuDashboardPage() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie 
-                  data={attendancePieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
+                  data={filteredPieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
                   label={({ percent }) => percent > 0 ? `${(percent * 100).toFixed(0)}%` : ''}
                 >
-                  {attendancePieData.map((entry, index) => (
+                  {filteredPieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
                 </Pie>
                 <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36} 
+                  iconType="circle" 
+                  payload={attendancePieData.map(item => ({
+                    id: item.name,
+                    type: 'circle',
+                    value: item.name,
+                    color: item.fill
+                  }))}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>

@@ -7,6 +7,23 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import api from '../../lib/axios';
 
+// Helper untuk mendapatkan tanggal awal pekan (Senin)
+const getStartOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
+    return new Date(new Date(d.setDate(diff)).setHours(0, 0, 0, 0));
+};
+
+// Helper untuk memformat tanggal ke YYYY-MM-DD untuk input date
+const formatDateForInput = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
 
 export default function DashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
@@ -90,6 +107,8 @@ export default function DashboardPage() {
     { name: 'Sedang', value: categoryCount.Sedang, fill: '#f59e0b' },
     { name: 'Ringan', value: categoryCount.Ringan, fill: '#3b82f6' },
   ];
+  
+  const filteredCalculatedPieData = calculatedPieData.filter(item => item.value > 0);
 
   const calculatedRecent = [...violations].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
 
@@ -133,7 +152,7 @@ export default function DashboardPage() {
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <PieChart>
                   <Pie 
-                    data={calculatedPieData} 
+                    data={filteredCalculatedPieData} 
                     cx="50%" 
                     cy="50%" 
                     innerRadius={60} 
@@ -142,12 +161,22 @@ export default function DashboardPage() {
                     dataKey="value"
                     label={({ percent }) => percent > 0 ? `${(percent * 100).toFixed(1)}%` : ''}
                   >
-                    {calculatedPieData.map((entry, index) => (
+                    {filteredCalculatedPieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Pie>
                   <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36} 
+                    iconType="circle" 
+                    payload={calculatedPieData.map(item => ({
+                      id: item.name,
+                      type: 'circle',
+                      value: item.name,
+                      color: item.fill
+                    }))}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -216,7 +245,7 @@ function StatCard({ title, value, icon: Icon, color, bg }) {
 }
 
 function WaliKelasDashboard({ role }) {
-  const [selectedDay, setSelectedDay] = useState('Senin');
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [students, setStudents] = useState([]);
   const [violations, setViolations] = useState([]);
   const [attendances, setAttendances] = useState([]);
@@ -250,27 +279,63 @@ function WaliKelasDashboard({ role }) {
   const siswaPantauan = students.filter(s => s.total_points >= 20).length;
 
   const attCount = { Hadir: 0, Sakit: 0, Izin: 0, Alpa: 0 };
-  attendances.forEach(a => {
+
+  // Kalkulasi data kehadiran per hari untuk satu pekan
+  const startOfWeek = getStartOfWeek(selectedDate);
+  const weekDays = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Normalisasi tanggal hari ini
+
+  const attendanceDataByWeek = weekDays.map((dayName, index) => {
+    const currentDay = new Date(startOfWeek);
+    currentDay.setDate(startOfWeek.getDate() + index);
+
+    // Jangan hitung persentase untuk hari di masa depan
+    if (currentDay > today) {
+      return { name: dayName.substring(0, 3), Kehadiran: 0 };
+    }
+
+    const dayAttendances = attendances.filter(a => {
+      const attDate = new Date(a.date);
+      attDate.setHours(0, 0, 0, 0);
+      return attDate.getTime() === currentDay.getTime();
+    });
+
+    // Akumulasi data status presensi untuk pie chart (hanya untuk pekan yang dipilih)
+    dayAttendances.forEach(a => {
       if (attCount[a.status] !== undefined) attCount[a.status]++;
+    });
+
+    const hadirCount = dayAttendances.filter(a => a.status === 'Hadir').length;
+    const totalRecords = dayAttendances.length;
+    const percentage = totalRecords > 0 ? Math.round((hadirCount / totalRecords) * 100) : 0;
+    return { name: dayName.substring(0, 3), Kehadiran: percentage };
   });
+
   const attendancePieData = [
       { name: 'Hadir', value: attCount.Hadir, fill: '#10b981' },
       { name: 'Sakit', value: attCount.Sakit, fill: '#f59e0b' },
       { name: 'Izin', value: attCount.Izin, fill: '#3b82f6' },
       { name: 'Alpa', value: attCount.Alpa, fill: '#ef4444' },
   ];
-
-  const daySchedules = schedules.filter(s => s.day === selectedDay).sort((a,b) => (a.start_time || '').localeCompare(b.start_time || ''));
-  const attendanceDataByDay = daySchedules.map(sch => {
-      const hadirCount = attendances.filter(a => (a.schedule_id?._id || a.schedule_id) === sch._id && a.status === 'Hadir').length;
-      return { name: sch.subject, hadir: hadirCount };
-  });
+  
+  const filteredAttendancePieData = attendancePieData.filter(item => item.value > 0);
 
   const wkViolations = [...violations].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
   };
+
+  // Ekstrak nama kelas secara dinamis dari data siswa (karena 1 wali kelas / sekretaris memegang 1 kelas)
+  let classNameInfo = 'Kelas Anda';
+  if (students.length > 0) {
+    const student = students[0];
+    const cls = student.class_id || student.class; // Menyesuaikan dengan field relasi di Database
+    if (cls) {
+      classNameInfo = typeof cls === 'string' ? cls : (cls.class_name || cls.className || cls.name || classNameInfo);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -298,25 +363,22 @@ function WaliKelasDashboard({ role }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm lg:col-span-2">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-            <h3 className="text-lg font-semibold text-slate-800">Tingkat Kehadiran Harian</h3>
-            <select 
-              value={selectedDay} 
-              onChange={(e) => setSelectedDay(e.target.value)}
+            <h3 className="text-lg font-semibold text-slate-800">Persentase Kehadiran Pekan Ini</h3>
+            <input 
+              type="date"
+              value={formatDateForInput(selectedDate)} 
+              onChange={(e) => setSelectedDate(new Date(e.target.value))}
               className="px-3 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-slate-700"
-            >
-              {['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'].map(day => (
-                <option key={day} value={day}>{day}</option>
-              ))}
-            </select>
+            />
           </div>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <BarChart data={attendanceDataByDay} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={attendanceDataByWeek} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} domain={[0, Math.max(totalSiswa, 10)]} />
-                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Bar dataKey="hadir" name="Jml Hadir" fill="#10b981" radius={[4, 4, 0, 0]} barSize={32} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
+                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => [`${value}%`, 'Kehadiran']} />
+                <Bar dataKey="Kehadiran" name="Persentase Hadir" fill="#10b981" radius={[4, 4, 0, 0]} barSize={32} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -328,7 +390,7 @@ function WaliKelasDashboard({ role }) {
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <PieChart>
                   <Pie 
-                    data={attendancePieData} 
+                    data={filteredAttendancePieData} 
                     cx="50%" 
                     cy="50%" 
                     innerRadius={60} 
@@ -337,12 +399,22 @@ function WaliKelasDashboard({ role }) {
                     dataKey="value"
                     label={({ percent }) => percent > 0 ? `${(percent * 100).toFixed(1)}%` : ''}
                   >
-                  {attendancePieData.map((entry, index) => (
+                  {filteredAttendancePieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
                 </Pie>
                 <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36} 
+                  iconType="circle" 
+                  payload={attendancePieData.map(item => ({
+                    id: item.name,
+                    type: 'circle',
+                    value: item.name,
+                    color: item.fill
+                  }))}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -353,7 +425,7 @@ function WaliKelasDashboard({ role }) {
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h3 className="text-lg font-semibold text-slate-800">
-            {role === 'sekretaris' ? 'Pelanggaran Terakhir' : 'Pelanggaran Terakhir (Kelas A)'}
+            Pelanggaran Terakhir ({classNameInfo})
           </h3>
         </div>
         <div className="overflow-x-auto">
