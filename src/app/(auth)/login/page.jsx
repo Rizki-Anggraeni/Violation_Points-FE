@@ -187,12 +187,12 @@ export default function LoginPage() {
                   'Login Now'
                 )}
               </button>
-              <button
-                type="button"
-                className="flex-1 py-3.5 px-6 bg-white border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] text-slate-700 font-semibold rounded-md -full transition-all focus:outline-none focus:ring-2 focus:ring-slate-200"
+              <Link
+                href="/register"
+                className="flex-1 py-3.5 px-6 bg-white border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] text-slate-700 font-semibold rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-slate-200 flex justify-center items-center"
               >
                 Create Account
-              </button>
+              </Link>
             </div>
 
           </form>
