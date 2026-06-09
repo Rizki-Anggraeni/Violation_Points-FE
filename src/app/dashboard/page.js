@@ -357,7 +357,7 @@ function WaliKelasDashboard({ role }) {
           </h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[600px]">
+          <table className="w-full text-left border-collapse min-w-150">
             <thead>
               <tr className="bg-slate-50/50 text-slate-500 text-sm border-b border-slate-100">
                 <th className="px-6 py-4 font-medium w-16">No</th>

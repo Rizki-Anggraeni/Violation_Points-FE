@@ -47,10 +47,8 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
         <button onClick={() => setIsOpen && setIsOpen(false)} className="absolute top-4 right-4 lg:hidden text-slate-400 hover:text-slate-600">
           <X size={20} />
         </button>
-        <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-2 shadow-md">
-          <span className="text-white font-extrabold text-lg tracking-wider">PUI</span>
-        </div>
-        <span className="text-base font-bold text-slate-800 tracking-tight">SMKN 1 Pringsurat</span>
+        <img src="/images/Logo-SMK.png" alt="Logo SMKN Pringsurat" className="w-14 h-14 object-contain mb-2 drop-shadow-sm" />
+        <span className="text-base font-bold text-slate-800 tracking-tight">SMKN Pringsurat</span>
         <span className="text-xs text-slate-500 font-medium mt-1">Sistem Poin Pelanggaran</span>
       </div>
 
