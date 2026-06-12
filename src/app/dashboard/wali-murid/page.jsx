@@ -11,6 +11,7 @@ import {
   Info,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   XCircle,
   CheckCircle,
   LogOut,
@@ -28,12 +29,14 @@ export default function DashboardWaliMurid() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   // State untuk API Data
-  const [studentData, setStudentData] = useState(null);
+  const [studentsList, setStudentsList] = useState([]);
+  const [activeStudentId, setActiveStudentId] = useState(null);
   const [attendances, setAttendances] = useState([]);
   const [violations, setViolations] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isStudentDropdownOpen, setIsStudentDropdownOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const router = useRouter();
 
@@ -47,13 +50,16 @@ export default function DashboardWaliMurid() {
           api.get('/schedules').catch(() => ({ data: [] }))
         ]);
         
-        let currentStudent = null;
+        let students = [];
         if (stuRes.data && Array.isArray(stuRes.data) && stuRes.data.length > 0) {
-          currentStudent = stuRes.data[0];
-          setStudentData(currentStudent);
+          students = stuRes.data;
         } else if (stuRes.data && !Array.isArray(stuRes.data) && stuRes.data._id) {
-          currentStudent = stuRes.data;
-          setStudentData(currentStudent);
+          students = [stuRes.data];
+        }
+        
+        setStudentsList(students);
+        if (students.length > 0) {
+          setActiveStudentId(students[0]._id);
         }
 
         if (attRes.data && Array.isArray(attRes.data)) {
@@ -63,10 +69,8 @@ export default function DashboardWaliMurid() {
           setViolations(vioRes.data.sort((a, b) => new Date(b.date) - new Date(a.date)));
         }
 
-        if (currentStudent && currentStudent.class_id) {
-          const classId = currentStudent.class_id._id || currentStudent.class_id;
-          const mySchedules = (schRes.data || []).filter(s => (s.class_id?._id || s.class_id) === classId);
-          setSchedules(mySchedules);
+        if (schRes.data && Array.isArray(schRes.data)) {
+          setSchedules(schRes.data);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -86,6 +90,8 @@ export default function DashboardWaliMurid() {
     );
   }
 
+  const studentData = studentsList.find(s => s._id === activeStudentId) || null;
+
   if (!studentData) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -100,6 +106,10 @@ export default function DashboardWaliMurid() {
     );
   }
 
+  const studentAttendances = attendances.filter(a => (a.student_id?._id || a.student_id) === activeStudentId);
+  const studentViolations = violations.filter(v => (v.student_id?._id || v.student_id) === activeStudentId);
+  const studentSchedules = schedules.filter(s => (s.class_id?._id || s.class_id) === (studentData.class_id?._id || studentData.class_id));
+
   const student = {
     name: studentData.name,
     nis: studentData.nis,
@@ -112,7 +122,7 @@ export default function DashboardWaliMurid() {
 
   // Presensi Hari Ini
   const todayStr = new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-  const todayAttendances = attendances.filter(a => new Date(a.date).toISOString().split('T')[0] === todayStr);
+  const todayAttendances = studentAttendances.filter(a => new Date(a.date).toISOString().split('T')[0] === todayStr);
   const latestTodayAttendance = todayAttendances.length > 0 ? todayAttendances[0] : null;
 
   const todayAttendance = latestTodayAttendance ? {
@@ -125,12 +135,12 @@ export default function DashboardWaliMurid() {
     message: 'Belum ada catatan kehadiran untuk tanggal ini'
   };
 
-  const recentViolations = violations.slice(0, 5);
+  const recentViolations = studentViolations.slice(0, 5);
 
   // Riwayat Kehadiran 5 Hari Terakhir (Unik per Hari)
   const uniqueDates = [];
   const weeklyAttendance = [];
-  attendances.forEach(a => {
+  studentAttendances.forEach(a => {
     const dateStr = new Date(a.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' });
     if (!uniqueDates.includes(dateStr) && weeklyAttendance.length < 5) {
       uniqueDates.push(dateStr);
@@ -200,7 +210,7 @@ export default function DashboardWaliMurid() {
     const isTodaySchedule = selectedDate.toDateString() === new Date().toDateString();
     const selectedDateStr = new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
     
-    const att = attendances.find(a => 
+    const att = studentAttendances.find(a => 
       (a.schedule_id?._id || a.schedule_id) === schedule._id && 
       new Date(a.date).toISOString().split('T')[0] === selectedDateStr
     );
@@ -223,7 +233,7 @@ export default function DashboardWaliMurid() {
     const daysList = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const dayName = daysList[date.getDay()];
     
-    return schedules.filter(s => s.day === dayName)
+    return studentSchedules.filter(s => s.day === dayName)
       .sort((a,b) => (a.start_time || '').localeCompare(b.start_time || ''))
       .map((sch, idx) => ({
         id: sch._id || idx,
@@ -280,7 +290,47 @@ export default function DashboardWaliMurid() {
               )}
             </div>
             <div className="text-white mt-2 md:mt-0">
-              <h2 className="text-2xl font-bold">{student.name}</h2>
+              {studentsList.length > 1 ? (
+                <div className="relative inline-block text-left mb-1 z-20">
+                  <button 
+                    onClick={() => setIsStudentDropdownOpen(!isStudentDropdownOpen)}
+                    className="flex items-center justify-between bg-white/20 hover:bg-white/30 border border-white/30 text-white text-xl md:text-2xl font-bold py-1.5 pl-4 pr-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-sm cursor-pointer transition-colors"
+                  >
+                    <span>{student.name}</span>
+                    <ChevronDown className={`w-5 h-5 ml-2 transition-transform duration-200 ${isStudentDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {isStudentDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setIsStudentDropdownOpen(false)}></div>
+                      <div className="absolute left-0 mt-2 w-full min-w-60 bg-white rounded-xl shadow-xl border border-slate-100 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="py-1 max-h-60 overflow-y-auto custom-scrollbar">
+                          {studentsList.map(s => (
+                            <button
+                              key={s._id}
+                              onClick={() => {
+                                setActiveStudentId(s._id);
+                                setIsStudentDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between ${
+                                activeStudentId === s._id ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-700 hover:bg-slate-50 font-medium'
+                              }`}
+                            >
+                              <div className="flex flex-col">
+                                <span>{s.name}</span>
+                                <span className={`text-xs mt-0.5 ${activeStudentId === s._id ? 'text-indigo-500' : 'text-slate-400'}`}>NIS: {s.nis}</span>
+                              </div>
+                              {activeStudentId === s._id && <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0 ml-2" />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <h2 className="text-2xl font-bold">{student.name}</h2>
+              )}
               <p className="text-sky-100 font-medium">{student.nis} • Kelas {student.className}</p>
             </div>
           </div>

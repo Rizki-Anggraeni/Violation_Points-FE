@@ -1,262 +1,195 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Search, Plus, Edit, Trash2, Inbox, Filter, ShieldAlert, Loader2, X, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldAlert, Search, ChevronLeft, ChevronRight, Plus, Edit, Trash2, Shield } from 'lucide-react';
 import api from '../../../lib/axios';
 
 export default function ViolationRulesPage() {
   const [rules, setRules] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState({ role: '' });
-  const [successMessage, setSuccessMessage] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Modal & Form States
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editRuleId, setEditRuleId] = useState(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
-  const [formData, setFormData] = useState({
-    violation_name: '',
-    points: '',
-    category: 'Ringan'
-  });
-
-  const showSuccess = (msg) => {
-    setSuccessMessage(msg);
-    setTimeout(() => setSuccessMessage(''), 3000);
-  };
+  // State untuk Paginasi
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25; // Sesuai permintaan (25 nomor per halaman)
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setCurrentUser({ role: payload.role });
-      } catch (e) {
-        console.error('Gagal memproses token');
-      }
-    }
-    fetchData();
+    fetchRules();
   }, []);
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchRules = async () => {
     try {
+      setIsLoading(true);
       const response = await api.get('/violation-rules');
-      setRules(response.data);
+      // Urutkan berdasarkan Kategori (Ringan -> Sedang -> Berat) atau Poin
+      const sortedData = response.data.sort((a, b) => a.points - b.points);
+      setRules(sortedData);
     } catch (error) {
-      console.error('Gagal mengambil data aturan:', error);
+      console.error('Error fetching violation rules:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleEditRuleClick = (rule) => {
-    setFormData({
-      violation_name: rule.violation_name,
-      points: rule.points,
-      category: rule.category
-    });
-    setEditRuleId(rule._id);
-    setIsModalOpen(true);
+  // Logika Pencarian & Filter
+  const handleSearch = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1); // Reset kembali ke halaman 1 saat mencari
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        ...formData,
-        points: Number(formData.points) // Pastikan poin berupa angka
-      };
+  const filteredRules = rules.filter(rule => 
+    rule.violation_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    rule.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-      if (editRuleId) {
-        await api.put(`/violation-rules/${editRuleId}`, payload);
-      } else {
-        await api.post('/violation-rules', payload);
-      }
-      setFormData({ violation_name: '', points: '', category: 'Ringan' });
-      setEditRuleId(null);
-      setIsModalOpen(false);
-      fetchData(); // Refresh data
-      showSuccess(editRuleId ? 'Aturan pelanggaran berhasil diperbarui!' : 'Aturan pelanggaran berhasil ditambahkan!');
-    } catch (error) {
-      console.error('Gagal menyimpan data aturan', error);
-      alert(error.response?.data?.message || 'Gagal menyimpan aturan');
-    }
-  };
+  // Logika Paginasi
+  const totalPages = Math.ceil(filteredRules.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredRules.slice(indexOfFirstItem, indexOfLastItem);
 
-  const confirmDelete = (id) => {
-    setDeleteId(id);
-    setIsDeleteModalOpen(true);
-  };
-
-  const executeDelete = async () => {
-    if (!deleteId) return;
-    try {
-      await api.delete(`/violation-rules/${deleteId}`);
-      fetchData();
-      showSuccess('Aturan pelanggaran berhasil dihapus!');
-      setIsDeleteModalOpen(false);
-      setDeleteId(null);
-    } catch (error) {
-      console.error('Gagal menghapus aturan', error);
-    }
-  };
-
-  // Filter Role: Hanya admin dan guru_bk yang bisa manage (tambah/edit/hapus)
-  const canManageData = ['admin', 'bk', 'guru_bk'].includes(currentUser.role);
-
-  // Logika Filter & Search
-  const filteredRules = rules.filter(rule => {
-    const matchSearch = rule.violation_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchCategory = categoryFilter ? rule.category === categoryFilter : true;
-    return matchSearch && matchCategory;
-  });
-
-  // Helper untuk warna badge kategori
+  // Styling dinamis untuk Badge Kategori
   const getCategoryBadge = (category) => {
     switch (category) {
-      case 'Berat': return 'bg-red-100 text-red-700 border-red-200';
-      case 'Sedang': return 'bg-amber-100 text-amber-700 border-amber-200';
-      default: return 'bg-blue-100 text-blue-700 border-blue-200'; // Ringan
+      case 'Ringan': 
+        return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+      case 'Sedang': 
+        return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'Berat': 
+      case 'Pelanggaran Berat':
+      case 'Tindakan Kriminal & Kekerasan':
+      case 'Asusila & Pornografi':
+        return 'bg-red-100 text-red-700 border-red-200';
+      default: 
+        return 'bg-indigo-100 text-indigo-700 border-indigo-200'; // Default (misal: Prestasi/Pengurang Poin)
     }
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Toast Notifikasi Sukses */}
-      {successMessage && (
-        <div className="fixed top-4 right-4 z-[100] bg-emerald-500 text-white px-4 py-3 rounded-xl shadow-lg flex items-center animate-in fade-in slide-in-from-top-4 duration-300">
-          <CheckCircle className="w-5 h-5 mr-3" />
-          <span className="text-sm font-medium pr-2">{successMessage}</span>
-          <button onClick={() => setSuccessMessage('')} className="ml-auto pl-2 border-l border-emerald-400/50 hover:text-emerald-200 transition-colors">
-            <X className="w-4 h-4" />
-          </button>
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-300">
+      {/* Header & Aksi */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 shrink-0">
+            <Shield className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Aturan Pelanggaran</h1>
+            <p className="text-slate-500 text-sm mt-1">Daftar jenis pelanggaran, kategori, dan bobot poin.</p>
+          </div>
         </div>
-      )}
-
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Aturan Pelanggaran</h2>
-          <p className="text-sm text-slate-500 mt-1">Kelola daftar jenis pelanggaran, bobot poin, dan kategorinya.</p>
-        </div>
-        {canManageData && (
-          <button onClick={() => {
-            setFormData({ violation_name: '', points: '', category: 'Ringan' });
-            setEditRuleId(null);
-            setIsModalOpen(true);
-          }} className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-            <Plus className="w-4 h-4 mr-2" />
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-800" />
+            <input 
+              type="text" 
+              placeholder="Cari nama pelanggaran..." 
+              value={searchQuery}
+              onChange={handleSearch}
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+            />
+          </div>
+          <button className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors shadow-sm">
+            <Plus className="w-4 h-4" />
             Tambah Aturan
           </button>
-        )}
-      </div>
-
-      {/* Filter & Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-          <input type="text" placeholder="Cari nama pelanggaran..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none" />
-        </div>
-        <div className="relative min-w-[200px]">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full pl-9 pr-4 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none appearance-none">
-            <option value="">Semua Kategori</option>
-            <option value="Ringan">Ringan</option>
-            <option value="Sedang">Sedang</option>
-            <option value="Berat">Berat</option>
-          </select>
         </div>
       </div>
 
-      {/* Table Area */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Tabel Data */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-150">
             <thead>
-              <tr className="bg-slate-50 text-slate-600 text-sm border-b border-slate-200">
-                <th className="px-6 py-4 font-semibold w-16">No</th>
-                <th className="px-6 py-4 font-semibold">Kategori</th>
+              <tr className="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
+                <th className="px-6 py-4 font-semibold w-16 text-center">No</th>
                 <th className="px-6 py-4 font-semibold">Nama Pelanggaran</th>
-                <th className="px-6 py-4 font-semibold text-center">Bobot Poin</th>
-                {canManageData && <th className="px-6 py-4 font-semibold text-center w-28">Aksi</th>}
+                <th className="px-6 py-4 font-semibold">Kategori</th>
+                <th className="px-6 py-4 font-semibold text-center w-24">Poin</th>
+                <th className="px-6 py-4 font-semibold text-center w-28">Aksi</th>
               </tr>
             </thead>
             <tbody className="text-sm text-slate-700 divide-y divide-slate-100">
               {isLoading ? (
-                <tr><td colSpan={canManageData ? 5 : 4} className="px-6 py-12 text-center text-slate-500"><div className="flex justify-center items-center"><Loader2 className="animate-spin w-8 h-8 mr-3"/> Memuat data...</div></td></tr>
-              ) : filteredRules.length > 0 ? (
-                filteredRules.map((rule, index) => (
-                  <tr key={rule._id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-slate-500">{index + 1}</td>
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                      <p className="text-slate-500 font-medium">Memuat data aturan...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : currentItems.length > 0 ? (
+                currentItems.map((rule, index) => (
+                  <tr key={rule._id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 text-center font-medium text-slate-400">
+                      {indexOfFirstItem + index + 1}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-slate-800">
+                      {rule.violation_name}
+                    </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${getCategoryBadge(rule.category)}`}>
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${getCategoryBadge(rule.category)}`}>
                         {rule.category}
                       </span>
                     </td>
-                    <td className="px-6 py-4 font-medium text-slate-800">{rule.violation_name}</td>
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                        {rule.points}
+                      <span className={`font-bold ${rule.points < 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {rule.points > 0 ? `+${rule.points}` : rule.points}
                       </span>
                     </td>
-                    {canManageData && (
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button onClick={() => handleEditRuleClick(rule)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit"><Edit className="w-4 h-4" /></button>
-                          <button onClick={() => confirmDelete(rule._id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Hapus"><Trash2 className="w-4 h-4" /></button>
-                        </div>
-                      </td>
-                    )}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Hapus">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={canManageData ? 5 : 4} className="px-6 py-12 text-center"><div className="flex flex-col items-center justify-center text-slate-400"><ShieldAlert className="w-12 h-12 mb-3 text-slate-300" /><p className="text-base font-medium text-slate-600">Tidak ada aturan ditemukan</p></div></td></tr>
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center">
+                    <ShieldAlert className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-500 font-medium">Tidak ada data aturan pelanggaran yang ditemukan.</p>
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Footer Paginasi */}
+        {!isLoading && filteredRules.length > 0 && (
+          <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-slate-100">
+            <p className="text-sm text-slate-500">
+              Menampilkan <span className="font-medium text-slate-800">{indexOfFirstItem + 1}</span> hingga <span className="font-medium text-slate-800">{Math.min(indexOfLastItem, filteredRules.length)}</span> dari <span className="font-medium text-slate-800">{filteredRules.length}</span> aturan
+            </p>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm font-medium text-slate-700 px-2">
+                Hal {currentPage} / {totalPages}
+              </span>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-2 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Modal Form Tambah */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center px-4">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-800">{editRuleId ? 'Edit Aturan Pelanggaran' : 'Tambah Aturan Pelanggaran'}</h3>
-              <button onClick={() => { setIsModalOpen(false); setEditRuleId(null); }} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">Nama Pelanggaran</label><input type="text" required value={formData.violation_name} onChange={e => setFormData({...formData, violation_name: e.target.value})} placeholder="Contoh: Terlambat > 15 Menit" className="w-full px-3 py-2 text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Kategori</label><select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full px-3 py-2 text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"><option value="Ringan">Ringan</option><option value="Sedang">Sedang</option><option value="Berat">Berat</option></select></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Bobot Poin</label><input type="number" required min="1" value={formData.points} onChange={e => setFormData({...formData, points: e.target.value})} placeholder="Misal: 10" className="w-full px-3 py-2 text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
-              </div>
-              <div className="flex justify-end pt-4"><button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">{editRuleId ? 'Simpan Perubahan' : 'Simpan Aturan'}</button></div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Konfirmasi Hapus */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm overflow-hidden text-center p-6 zoom-in-95 animate-in duration-200">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Trash2 className="w-8 h-8 text-red-600" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Konfirmasi Hapus</h3>
-            <p className="text-sm text-slate-500 mb-6">Apakah Anda yakin ingin menghapus aturan pelanggaran ini? Data yang terhapus tidak dapat dikembalikan.</p>
-            <div className="flex justify-center gap-3">
-              <button onClick={() => { setIsDeleteModalOpen(false); setDeleteId(null); }} className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium text-sm transition-colors">Batal</button>
-              <button onClick={executeDelete} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm transition-colors">Ya, Hapus</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
