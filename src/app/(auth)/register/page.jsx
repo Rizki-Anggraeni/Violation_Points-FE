@@ -1,25 +1,64 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
 import Image from 'next/image';
 import Link from 'next/link';
-import { User, Lock, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { User, Lock, CheckCircle2, ArrowLeft, AlertCircle, PartyPopper } from 'lucide-react';
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const router = useRouter();
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (password !== confirmPassword) {
+      setError('Password dan konfirmasi password tidak cocok.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password minimal harus 6 karakter.');
+      return;
+    }
+
     setIsLoading(true);
     
-    // Simulasi loading UI (belum terhubung backend)
-    setTimeout(() => {
+    try {
+      // Panggil API backend untuk registrasi
+      const response = await axios.post('http://localhost:3000/api/auth/register', {
+        name: fullName,
+        username: username,
+        password: password,
+        role: 'orang_tua' // Asumsi mendaftar sebagai orang tua
+      });
+
+      setSuccess(response.data.message + ' Anda akan diarahkan ke halaman login.');
+
+      // Arahkan ke halaman login setelah 3 detik
+      setTimeout(() => {
+        router.push('/login');
+      }, 3000);
+
+    } catch (err) {
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Gagal mendaftar. Terjadi kesalahan pada server.');
+      }
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -68,6 +107,22 @@ export default function RegisterPage() {
               Lengkapi form di bawah ini untuk mendaftarkan akun Anda ke dalam sistem.
             </p>
           </div>
+
+          {/* Pesan Error */}
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl p-3 flex items-center gap-3 animate-in fade-in duration-300">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Pesan Sukses */}
+          {success && (
+            <div className="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-600 text-sm rounded-xl p-3 flex items-center gap-3 animate-in fade-in duration-300">
+              <PartyPopper className="w-5 h-5 shrink-0" />
+              <span>{success}</span>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleRegister} className="space-y-5">
@@ -139,7 +194,7 @@ export default function RegisterPage() {
 
             {/* Action Buttons */}
             <div className="pt-6 space-y-4">
-              <button type="submit" disabled={isLoading} className="w-full py-3.5 px-6 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold rounded-full shadow-lg shadow-blue-500/30 transition-all focus:outline-none flex justify-center items-center">
+              <button type="submit" disabled={isLoading || success} className="w-full py-3.5 px-6 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold rounded-full shadow-lg shadow-blue-500/30 transition-all focus:outline-none flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed">
                 {isLoading ? 'Memproses...' : 'Daftar Sekarang'}
               </button>
               
