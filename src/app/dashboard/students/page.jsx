@@ -13,6 +13,10 @@ export default function DataSiswaPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState({ role: '' });
 
+  // State untuk Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [studentsPerPage] = useState(25);
+
   const [successMessage, setSuccessMessage] = useState('');
   // Modal & Form States (Pastikan ini berada di dalam DataSiswaPage)
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -122,14 +126,26 @@ export default function DataSiswaPage() {
     return matchSearch && matchClass;
   });
 
+  // Logika Pagination di sisi klien
+  const indexOfLastStudent = currentPage * studentsPerPage;
+  const indexOfFirstStudent = indexOfLastStudent - studentsPerPage;
+  const currentStudents = filteredStudents.slice(indexOfFirstStudent, indexOfLastStudent);
+  const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
+
+  const paginate = (pageNumber) => {
+    if (pageNumber > 0 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Toast Notifikasi Sukses */}
       {successMessage && (
-        <div className="fixed top-4 right-4 z-[100] bg-emerald-500 text-white px-4 py-3 rounded-xl shadow-lg flex items-center animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="fixed top-5 right-5 z-100 bg-emerald-500 text-white px-4 py-3 rounded-xl shadow-lg flex items-center animate-in fade-in slide-in-from-top-5 duration-300">
           <CheckCircle className="w-5 h-5 mr-3" />
           <span className="text-sm font-medium pr-2">{successMessage}</span>
-          <button onClick={() => setSuccessMessage('')} className="ml-auto pl-2 border-l border-emerald-400/50 hover:text-emerald-200 transition-colors">
+          <button onClick={() => setSuccessMessage('')} className="ml-auto pl-2 border-l border-emerald-400/50 hover:text-emerald-100 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -166,7 +182,7 @@ export default function DataSiswaPage() {
           />
         </div>
         {showClassFilter && (
-          <div className="relative min-w-[200px]">
+          <div className="relative min-w-50">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
             <select
               value={classFilter}
@@ -207,8 +223,8 @@ export default function DataSiswaPage() {
                   </td>
                 </tr>
               ) : filteredStudents.length > 0 ? (
-                filteredStudents.map((student, index) => (
-                  <tr key={student._id} className="hover:bg-slate-50 transition-colors">
+                currentStudents.map((student, index) => (
+                  <tr key={student._id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-6 py-4 text-slate-500">{index + 1}</td>
                     <td className="px-6 py-4 font-medium">{student.nis}</td>
                   <td className="px-6 py-4 font-semibold text-slate-800">
@@ -257,11 +273,19 @@ export default function DataSiswaPage() {
         </div>
         
         {/* Pagination Section */}
-        {!isLoading && filteredStudents.length > 0 && (
+        {!isLoading && totalPages > 1 && (
           <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
             <span className="text-sm text-slate-500">
-              Menampilkan <span className="font-medium text-slate-700">{filteredStudents.length}</span> dari <span className="font-medium text-slate-700">{students.length}</span> siswa
+              Halaman <span className="font-medium text-slate-700">{currentPage}</span> dari <span className="font-medium text-slate-700">{totalPages}</span>
             </span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                Sebelumnya
+              </button>
+              <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                Berikutnya
+              </button>
+            </div>
           </div>
         )}
       </div>
