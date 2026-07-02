@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Image from 'next/image';
 import Link from 'next/link';
-import { User, Lock, CheckCircle2, ArrowLeft, AlertCircle, PartyPopper } from 'lucide-react';
+import { User, Lock, ArrowLeft, AlertCircle, PartyPopper, BookUser, PlusCircle, Trash2 } from 'lucide-react';
 
 export default function RegisterPage() {
-  const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [nisList, setNisList] = useState(['']); // State array untuk menampung banyak NIS
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,21 +27,32 @@ export default function RegisterPage() {
       setError('Password dan konfirmasi password tidak cocok.');
       return;
     }
+
     if (password.length < 6) {
       setError('Password minimal harus 6 karakter.');
+      return;
+    }
+    // Validasi agar tidak ada input NIS yang kosong
+    if (nisList.some(nis => nis.trim() === '')) {
+      setError('Semua kolom NIS Murid harus diisi.');
       return;
     }
 
     setIsLoading(true);
     
     try {
-      // Panggil API backend untuk registrasi
-      const response = await axios.post('http://localhost:3000/api/auth/register', {
-        name: fullName,
+      // Mengirim data username, password, dan nis ke backend
+      // Endpoint disesuaikan dengan /api/users/register-ortu atau rute yang relevan
+      const payload = {
         username: username,
         password: password,
-        role: 'orang_tua' // Asumsi mendaftar sebagai orang tua
-      });
+        role: 'orang_tua',
+        // Mengirim semua NIS yang valid (tidak kosong dan sudah di-trim)
+        student_nis: nisList.map(n => n.trim()).filter(n => n !== '')
+      };
+
+      // Sesuaikan endpoint jika perlu
+      const response = await axios.post('http://localhost:3000/api/auth/register', payload);
 
       setSuccess(response.data.message + ' Anda akan diarahkan ke halaman login.');
 
@@ -61,6 +72,22 @@ export default function RegisterPage() {
     }
   };
 
+  // Fungsi untuk mengubah nilai NIS pada index tertentu
+  const handleNisChange = (index, value) => {
+    const newNisList = [...nisList];
+    newNisList[index] = value;
+    setNisList(newNisList);
+  };
+
+  // Fungsi untuk menambah input NIS baru
+  const addNisInput = () => {
+    setNisList([...nisList, '']);
+  };
+
+  // Fungsi untuk menghapus input NIS pada index tertentu
+  const removeNisInput = (index) => {
+    setNisList(nisList.filter((_, i) => i !== index));
+  };
   return (
     <div className="min-h-screen bg-slate-50 flex">
       
@@ -127,33 +154,9 @@ export default function RegisterPage() {
           {/* Form */}
           <form onSubmit={handleRegister} className="space-y-5">
             
-            {/* Input Nama Lengkap */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 ml-1">Nama Lengkap</label>
-              <div className="relative flex items-center group">
-                <div className="absolute left-4 text-slate-400 group-focus-within:text-blue-500 transition-colors">
-                  <User className="w-5 h-5" />
-                </div>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Masukkan nama lengkap"
-                  className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm text-slate-800 placeholder-slate-400 shadow-sm"
-                  required
-                />
-                {/* Indikator Centang jika sudah diisi */}
-                {fullName.length > 3 && (
-                  <div className="absolute right-4 text-emerald-500 animate-in zoom-in duration-200">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Input Username */}
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 ml-1">Username / NIS</label>
+              <label className="text-sm font-semibold text-slate-700 ml-1">Username</label>
               <div className="relative flex items-center group">
                 <div className="absolute left-4 text-slate-400 group-focus-within:text-blue-500 transition-colors">
                   <User className="w-5 h-5" />
@@ -190,6 +193,41 @@ export default function RegisterPage() {
                   <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm text-slate-800 placeholder-slate-400 shadow-sm" required />
                 </div>
               </div>
+            </div>
+
+            {/* Input NIS Murid (Dinamis) */}
+            <div className="space-y-3 pt-1">
+              <label className="text-sm font-semibold text-slate-700 ml-1">NIS Anak</label>
+              {nisList.map((nis, index) => (
+                <div key={index} className="relative flex items-center group">
+                  <div className="absolute left-4 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                    <BookUser className="w-5 h-5" />
+                  </div>
+                  <input
+                    type="text"
+                    value={nis}
+                    onChange={(e) => handleNisChange(index, e.target.value)}
+                    placeholder={`NIS Anak ke-${index + 1}`}
+                    className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm text-slate-800 placeholder-slate-400 shadow-sm"
+                    required
+                  />
+                  {/* Tombol Hapus hanya muncul jika ada lebih dari 1 input */}
+                  {nisList.length > 1 && (
+                    <button type="button" onClick={() => removeNisInput(index)} className="absolute right-4 text-slate-400 hover:text-red-500 transition-colors">
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {/* Tombol Tambah Anak */}
+              <button
+                type="button"
+                onClick={addNisInput}
+                className="w-full py-2.5 px-4 bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold rounded-xl border-2 border-dashed border-blue-200 transition-all focus:outline-none flex justify-center items-center gap-2 text-sm"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Tambah NIS Anak
+              </button>
             </div>
 
             {/* Action Buttons */}
