@@ -209,7 +209,7 @@ export default function DataSiswaPage() {
                 <th className="px-6 py-4 font-semibold">Nama Siswa</th>
                 <th className="px-6 py-4 font-semibold">Kelas</th>
                 <th className="px-6 py-4 font-semibold text-center">Total Poin</th>
-                {canManageData && <th className="px-6 py-4 font-semibold text-center w-28">Aksi</th>}
+                {canManageData && <th className="px-6 py-4 font-semibold text-center w-32">Aksi</th>}
               </tr>
             </thead>
             <tbody className="text-sm text-slate-700 divide-y divide-slate-100">
@@ -225,7 +225,7 @@ export default function DataSiswaPage() {
               ) : filteredStudents.length > 0 ? (
                 currentStudents.map((student, index) => (
                   <tr key={student._id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="px-6 py-4 text-slate-500">{index + 1}</td>
+                    <td className="px-6 py-4 text-slate-500">{indexOfFirstStudent + index + 1}</td>
                     <td className="px-6 py-4 font-medium">{student.nis}</td>
                   <td className="px-6 py-4 font-semibold text-slate-800">
                     <Link href={`/dashboard/siswa/${student._id}`} className="hover:text-blue-600 hover:underline transition-colors" title="Lihat Detail Siswa">
@@ -292,17 +292,17 @@ export default function DataSiswaPage() {
 
       {/* Modal Form Tambah Siswa */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center px-4">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden border border-slate-200">
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100">
               <h3 className="font-bold text-slate-800">{editId ? 'Edit Data Siswa' : 'Tambah Data Siswa'}</h3>
               <button onClick={() => { setIsModalOpen(false); setEditId(null); }} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">NIS</label><input type="text" required value={formData.nis} onChange={e => setFormData({...formData, nis: e.target.value})} placeholder="Nomor Induk Siswa" className="w-full px-3 py-2 text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">Nama Lengkap</label><input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Nama Siswa" className="w-full px-3 py-2 text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">Kelas</label><select required value={formData.class_id} onChange={e => setFormData({...formData, class_id: e.target.value})} className="w-full px-3 py-2 text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"><option value="">-- Pilih Kelas --</option>{classes.map(c => (<option key={c._id} value={c._id}>{c.name}</option>))}</select></div>
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">No. HP Orang Tua (Opsional)</label><input type="text" value={formData.parrent_phone} onChange={e => setFormData({...formData, parrent_phone: e.target.value})} placeholder="08123456789" className="w-full px-3 py-2 text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
+              <div><label className="block text-sm font-medium text-slate-700 mb-1">NIS</label><input type="text" required value={formData.nis} onChange={e => setFormData({...formData, nis: e.target.value})} placeholder="Nomor Induk Siswa" className="w-full px-3 py-2 text-slate-800 bg-white placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
+              <div><label className="block text-sm font-medium text-slate-700 mb-1">Nama Lengkap</label><input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Nama Siswa" className="w-full px-3 py-2 text-slate-800 bg-white placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
+              <div><label className="block text-sm font-medium text-slate-700 mb-1">Kelas</label><select required value={formData.class_id} onChange={e => setFormData({...formData, class_id: e.target.value})} className="w-full px-3 py-2 text-slate-800 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"><option value="">-- Pilih Kelas --</option>{classes.map(c => (<option key={c._id} value={c._id}>{c.name}</option>))}</select></div>
+              <div><label className="block text-sm font-medium text-slate-700 mb-1">No. HP Orang Tua (Opsional)</label><input type="text" value={formData.parrent_phone} onChange={e => setFormData({...formData, parrent_phone: e.target.value})} placeholder="08123456789" className="w-full px-3 py-2 text-slate-800 bg-white placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/></div>
               <div className="flex justify-end pt-4"><button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">{editId ? 'Simpan Perubahan' : 'Simpan Siswa'}</button></div>
             </form>
           </div>
