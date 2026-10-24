@@ -1,11 +1,32 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, AlertTriangle, TrendingUp, ShieldAlert, BarChart3, Eye, Plus, MoreVertical, BookOpen } from 'lucide-react';
+import { 
+  Users, 
+  AlertTriangle, 
+  TrendingUp, 
+  ShieldAlert, 
+  BarChart3, 
+  Eye, 
+  Plus, 
+  MoreVertical, 
+  BookOpen,
+  Brain,
+  Sparkles,
+  ArrowRight,
+  CheckCircle,
+  Phone,
+  X,
+  Info,
+  Activity,
+  AlertCircle,
+  MessageSquare
+} from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import api from '../../lib/axios';
+import { getStudentRiskData } from '../../lib/knn';
 
 // Helper untuk mendapatkan tanggal awal pekan (Senin)
 const getStartOfWeek = (date) => {
@@ -27,45 +48,75 @@ const formatDateForInput = (date) => {
 
 export default function DashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
-  const [role, setRole] = useState('');
+  const [role] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          return payload.role || '';
+        } catch (e) {
+          console.error('Gagal memproses token');
+        }
+      }
+    }
+    return '';
+  });
   const [students, setStudents] = useState([]);
   const [violations, setViolations] = useState([]);
+  const [knnData, setKnnData] = useState([]);
+  const [knnStats, setKnnStats] = useState(null);
+  const [selectedKnnDetail, setSelectedKnnDetail] = useState(null);
+  const [isKnnModalOpen, setIsKnnModalOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    let currentRole = '';
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setRole(payload.role);
-        currentRole = payload.role;
-      } catch (e) {
-        console.error('Gagal memproses token');
-      }
-    }
-
-    if (currentRole === 'orang_tua') {
+    if (role === 'orang_tua') {
       router.push('/dashboard/wali-murid');
-      return; // Berhenti agar tidak melakukan fetch data admin
+      return;
     }
 
+    let ignore = false;
     const fetchDashboardData = async () => {
       try {
         const [stuRes, vioRes] = await Promise.all([
             api.get('/students'),
             api.get('/violations')
         ]);
-        setStudents(stuRes.data);
-        setViolations(vioRes.data);
+        if (!ignore) {
+          setStudents(stuRes.data);
+          setViolations(vioRes.data);
+        }
+
+        // Fetch data deteksi kerawanan KNN khusus Guru BK dan Admin
+        if (role === 'admin' || role === 'guru_bk' || role === 'bk') {
+          try {
+            const knnRes = await getStudentRiskData(5);
+            if (!ignore && knnRes?.success) {
+              setKnnData(knnRes.data || []);
+              setKnnStats(knnRes.stats || null);
+            }
+          } catch (knnErr) {
+            console.error('Gagal mengambil data risiko KNN:', knnErr);
+          }
+        }
       } catch (e) {
-        console.error('Gagal memuat data dashboard', e);
+        if (!ignore) {
+          console.error('Gagal memuat data dashboard', e);
+        }
+      } finally {
+        if (!ignore) {
+          setIsMounted(true);
+        }
       }
     };
     
     fetchDashboardData();
-    setIsMounted(true);
-  }, []);
+
+    return () => {
+      ignore = true;
+    };
+  }, [role, router]);
 
   if (!isMounted) return null;
 
@@ -112,6 +163,15 @@ export default function DashboardPage() {
 
   const calculatedRecent = [...violations].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
 
+  const topRawanList = knnData
+    .filter(item => item.classification?.label === 'Rawan' || item.classification?.label === 'Waspada')
+    .slice(0, 5);
+
+  const openKnnModal = (item) => {
+    setSelectedKnnDetail(item);
+    setIsKnnModalOpen(true);
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
   };
@@ -125,6 +185,175 @@ export default function DashboardPage() {
         <StatCard title="Kasus Berat" value={kasusBerat} icon={AlertTriangle} color="text-slate-700" bg="bg-slate-100" />
         <StatCard title="Siswa Peringatan" value={siswaPeringatan} icon={ShieldAlert} color="text-slate-700" bg="bg-slate-100" />
       </div>
+
+      {/* SECTION KHUSUS GURU BK & ADMIN: Deteksi Tingkat Kerawanan Siswa (BK) */}
+      {(role === 'admin' || role === 'guru_bk' || role === 'bk') && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-5 sm:p-6 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-indigo-500/20 border border-indigo-400/30 rounded-full text-indigo-300 text-xs font-semibold uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                Sistem Deteksi Dini Bimbingan Konseling (BK)
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2">
+                <Brain className="w-5 h-5 text-indigo-400" />
+                Peta Kerawanan Siswa Terhadap Pelanggaran
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
+                Membantu Guru BK mendeteksi siswa yang berpotensi mengulangi pelanggaran berikutnya dengan memadukan akumulasi poin, rekap alpa, dan keterlambatan.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href="/dashboard/student-risk"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
+              >
+                Lihat Peta Lengkap
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Quick Stats Bar */}
+          {knnStats && (
+            <div className="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100 bg-slate-50/50">
+              <div className="p-4 text-center">
+                <span className="text-xs font-semibold text-rose-600 block uppercase tracking-wider">Kategori Rawan</span>
+                <span className="text-2xl font-bold text-rose-700">{knnStats.total_rawan}</span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">{knnStats.percentage_rawan}% butuh tindakan segera</span>
+              </div>
+              <div className="p-4 text-center">
+                <span className="text-xs font-semibold text-amber-600 block uppercase tracking-wider">Kategori Waspada</span>
+                <span className="text-2xl font-bold text-amber-700">{knnStats.total_waspada}</span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">{knnStats.percentage_waspada}% perlu dipantau</span>
+              </div>
+              <div className="p-4 text-center">
+                <span className="text-xs font-semibold text-emerald-600 block uppercase tracking-wider">Kategori Aman</span>
+                <span className="text-2xl font-bold text-emerald-700">{knnStats.total_aman}</span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">{knnStats.percentage_aman}% tertib disiplin</span>
+              </div>
+            </div>
+          )}
+
+          {/* Top Siswa Rawan / Prioritas Intervensi */}
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-rose-600" />
+                Siswa Prioritas Penanganan BK (Risiko Paling Tinggi)
+              </h4>
+              <span className="text-xs text-slate-400">
+                Ditampilkan 5 siswa teratas
+              </span>
+            </div>
+
+            {topRawanList.length === 0 ? (
+              <div className="p-8 text-center bg-emerald-50/50 rounded-xl border border-emerald-100">
+                <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-emerald-800">
+                  Kedisiplinan Siswa Terpantau Baik
+                </p>
+                <p className="text-xs text-emerald-600 mt-0.5">
+                  Tidak ada siswa dalam kategori Rawan saat ini. Seluruh siswa terpantau dalam batas aman dan waspada.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
+                      <th className="px-4 py-3">Nama & Kelas</th>
+                      <th className="px-4 py-3 text-center">Poin Pelanggaran</th>
+                      <th className="px-4 py-3 text-center">Alpa</th>
+                      <th className="px-4 py-3 text-center">Terlambat</th>
+                      <th className="px-4 py-3">Tingkat Risiko Pelanggaran</th>
+                      <th className="px-4 py-3">Tindakan Disarankan</th>
+                      <th className="px-4 py-3 text-center">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {topRawanList.map((item, idx) => {
+                      const isRawan = item.classification?.label === 'Rawan';
+                      return (
+                        <tr key={item.student._id || idx} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="px-4 py-3 font-semibold text-slate-800">
+                            <div>{item.student.name}</div>
+                            <div className="text-[11px] text-slate-400">
+                              Kelas: {item.student.class_name} | NIS: {item.student.nis}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                              item.metrics.points >= 50 ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {item.metrics.points} Poin
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center font-semibold text-rose-600">
+                            {item.metrics.alpa > 0 ? `${item.metrics.alpa} hari` : '0'}
+                          </td>
+                          <td className="px-4 py-3 text-center font-semibold text-amber-600">
+                            {item.metrics.late > 0 ? `${item.metrics.late}x` : '0'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                                  isRawan ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                                }`}>
+                                  {item.classification?.label}
+                                </span>
+                                <span className="text-[11px] text-slate-500 font-medium">
+                                  {item.classification?.confidence} yakin
+                                </span>
+                              </div>
+                              <div className="w-28 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${isRawan ? 'bg-rose-500' : 'bg-amber-500'}`}
+                                  style={{ width: isRawan ? '90%' : '55%' }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 max-w-xs text-xs text-slate-600">
+                            <p className="line-clamp-2 leading-relaxed">
+                              {item.classification?.recommendation}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => openKnnModal(item)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200"
+                              >
+                                <Info className="w-3.5 h-3.5" />
+                                Penjelasan
+                              </button>
+                              {item.student.parrent_phone && (
+                                <a
+                                  href={`https://wa.me/${item.student.parrent_phone.replace(/[^0-9]/g, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-200"
+                                  title="WhatsApp Orang Tua"
+                                >
+                                  <Phone className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Area Grafik */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -226,6 +455,137 @@ export default function DashboardPage() {
           </table>
         </div>
       </div>
+
+      {/* Modal Penjelasan Kasus Ramah Orang Awam */}
+      {isKnnModalOpen && selectedKnnDetail && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto zoom-in-95 animate-in duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                  <Brain className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base">Penjelasan Kerawanan Siswa</h3>
+                  <p className="text-xs text-slate-500">Hasil analisis kecerdasan buatan berbasis data sekolah</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsKnnModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Profil Siswa */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="font-extrabold text-slate-800 text-lg">{selectedKnnDetail.student.name}</h4>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Kelas: <b>{selectedKnnDetail.student.class_name}</b> | NIS: <b>{selectedKnnDetail.student.nis}</b>
+                  </p>
+                </div>
+                <div>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
+                    selectedKnnDetail.classification.label === 'Rawan' ? 'bg-rose-100 text-rose-800 border-rose-300' :
+                    selectedKnnDetail.classification.label === 'Waspada' ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                    'bg-emerald-100 text-emerald-800 border-emerald-300'
+                  }`}>
+                    Status: {selectedKnnDetail.classification.label}
+                  </span>
+                </div>
+              </div>
+
+              {/* Mengapa Siswa Masuk Kategori Ini? */}
+              <div className="bg-amber-50/70 border border-amber-200 p-4 rounded-xl">
+                <h5 className="text-xs font-bold text-amber-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 text-amber-700" />
+                  Mengapa Siswa Dinilai {selectedKnnDetail.classification.label}?
+                </h5>
+                <p className="text-xs text-amber-900 leading-relaxed">
+                  {selectedKnnDetail.classification.friendly?.whyReason || 
+                   `Siswa memiliki akumulasi ${selectedKnnDetail.metrics.points} poin pelanggaran, serta tercatat ${selectedKnnDetail.metrics.alpa} kali alpa dan ${selectedKnnDetail.metrics.late} kali terlambat.`}
+                </p>
+              </div>
+
+              {/* 3 Angka Catatan Perilaku Siswa */}
+              <div>
+                <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                  Catatan Perilaku Siswa di Sekolah
+                </h5>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <span className="text-[11px] text-slate-500 block">Poin Pelanggaran</span>
+                    <span className="text-xl font-extrabold text-slate-800">
+                      {selectedKnnDetail.metrics.points}
+                    </span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">Batas SP: 100 Poin</span>
+                  </div>
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <span className="text-[11px] text-slate-500 block">Alpa / Bolos</span>
+                    <span className="text-xl font-extrabold text-rose-600">
+                      {selectedKnnDetail.metrics.alpa}x
+                    </span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">Tanpa Keterangan</span>
+                  </div>
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <span className="text-[11px] text-slate-500 block">Keterlambatan</span>
+                    <span className="text-xl font-extrabold text-amber-600">
+                      {selectedKnnDetail.metrics.late}x
+                    </span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">Datang Terlambat</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rencana Tindakan untuk Guru BK */}
+              <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl">
+                <h5 className="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <MessageSquare className="w-4 h-4 text-indigo-700" />
+                  Rencana Tindakan Guru BK (Solusi)
+                </h5>
+                <p className="text-xs text-indigo-900 leading-relaxed">
+                  {selectedKnnDetail.classification.recommendation}
+                </p>
+              </div>
+
+              {/* Tombol Hubungi Ortu Jika Ada Nomor */}
+              {selectedKnnDetail.student.parrent_phone && (
+                <div className="flex items-center justify-between p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <div className="text-xs text-emerald-900">
+                    <span className="font-bold block">Nomor HP Orang Tua:</span>
+                    <span>{selectedKnnDetail.student.parrent_phone}</span>
+                  </div>
+                  <a
+                    href={`https://wa.me/${selectedKnnDetail.student.parrent_phone.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    Kirim Pesan WhatsApp
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+              <span className="text-[11px] text-slate-400">
+                Sistem Bimbingan Konseling SMKN Pringsurat
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsKnnModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

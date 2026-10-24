@@ -14,7 +14,8 @@ import {
   CheckSquare,
   FileText,
   Table,
-  Key
+  Key,
+  Activity
 } from 'lucide-react';
 import ChangePassword from './ChangePassword';
 
@@ -38,6 +39,7 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
   // Pengecekan role: admin, bk (atau guru_bk), guru, dan wali_kelas bisa melihat Data Master
   const isMasterVisible = role === 'admin' || role === 'bk' || role === 'guru_bk' || role === 'guru' || role === 'wali_kelas';
   const canSeeTeachers = role === 'admin' || role === 'bk' || role === 'guru_bk';
+  const isBKorAdmin = role === 'admin' || role === 'bk' || role === 'guru_bk';
 
   return (
     <>
@@ -107,6 +109,23 @@ export default function Sidebar({ role, onLogout, isOpen, setIsOpen }) {
             >
               <CheckSquare className={`w-5 h-5 mr-3 transition-colors ${pathname.startsWith('/dashboard/attendances') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500'}`} />
               <span className="text-sm font-medium">Input Presensi</span>
+            </Link>
+          )}
+
+          {/* Menu Khusus Guru BK & Admin: Deteksi Kerawanan Siswa (KNN) */}
+          {isBKorAdmin && (
+            <Link
+              href="/dashboard/student-risk"
+              onClick={() => setIsOpen && setIsOpen(false)}
+              className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group ${
+                pathname.startsWith('/dashboard/student-risk') ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <Activity className={`w-5 h-5 mr-3 transition-colors ${pathname.startsWith('/dashboard/student-risk') ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-500'}`} />
+              <div className="flex items-center justify-between w-full">
+                <span className="text-sm font-medium">Deteksi Kerawanan</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-md">KNN</span>
+              </div>
             </Link>
           )}
 
